@@ -3,3 +3,5 @@
 *.exe
 *.yaml
 *.pem
+
+node_modules/

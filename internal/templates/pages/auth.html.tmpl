@@ -1,0 +1,13 @@
+{{define "title"}}Login{{end}}
+
+{{define "content"}}
+<h2>Login</h2>
+{{if .Error}}
+    <div class="error">{{.Error}}</div>
+{{end}}
+<form action="/auth/login" method="post">
+    <input type="text" id="SessionId" value="{{.SessionId}}" disabled />
+    <input type="text" id="Username" placeholder="Username" />
+    <input type="text" id="Password" placeholder="Password" />
+</form>
+{{end}}

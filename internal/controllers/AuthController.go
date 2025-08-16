@@ -2,12 +2,23 @@ package controllers
 
 import (
 	"dndcc/internal/models"
+	"dndcc/internal/models/page"
 	"dndcc/internal/services"
 	"fmt"
+	"html/template"
 	"net/http"
 
 	"github.com/StevenAlexanderJohnson/grove"
 )
+
+var authTemplates = make(map[string]*template.Template)
+
+func init() {
+	authTemplates["login"] = template.Must(template.ParseFiles(
+		"internal/templates/layouts/layout.html.tmpl",
+		"internal/templates/pages/auth.html.tmpl",
+	))
+}
 
 type AuthController struct {
 	authService    *services.AuthService
@@ -24,18 +35,37 @@ func NewAuthController(service *services.AuthService, sessionService *services.S
 }
 
 func (c *AuthController) RegisterRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("GET /auth/login", c.LoginPage)
 	mux.HandleFunc("POST /auth/login", c.Login)
 	mux.HandleFunc("POST /auth/register", c.Register)
 }
 
-func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
-	data, err := grove.ParseJsonBodyFromRequest[*models.Auth](r)
+func (c *AuthController) LoginPage(w http.ResponseWriter, r *http.Request) {
+	session, err := getSessionCookie(r)
 	if err != nil {
-		c.logger.Error(err.Error())
-		grove.WriteErrorToResponse(w, http.StatusBadRequest, err.Error())
+		c.logger.Warning("an error occurred while trying to get session id for login page", err)
+		grove.WriteErrorToResponse(w, http.StatusInternalServerError, "")
 		return
 	}
-	user, authToken, err := c.authService.Get(data)
+	if err := authTemplates["login"].Execute(w, page.LoginData{
+		SessionId: session,
+		Error:     "",
+	}); err != nil {
+		grove.WriteErrorToResponse(w, http.StatusInternalServerError, "")
+		return
+	}
+}
+
+func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		c.logger.Warning("received an invalid form request to the login page: %s", r.RemoteAddr)
+		grove.WriteErrorToResponse(w, http.StatusBadRequest, "Failed to parse form")
+		return
+	}
+	var data models.Auth
+	data.Username = r.FormValue("username")
+	data.Password = r.FormValue("password")
+	user, authToken, err := c.authService.Get(&data)
 	if err != nil {
 		c.logger.Error(err.Error())
 		grove.WriteErrorToResponse(w, http.StatusNoContent, "")

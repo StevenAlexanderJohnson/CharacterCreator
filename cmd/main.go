@@ -7,6 +7,7 @@ import (
 	"dndcc/internal/models"
 	"dndcc/internal/repositories"
 	"dndcc/internal/services"
+	"net/http"
 
 	"github.com/StevenAlexanderJohnson/grove"
 	_ "modernc.org/sqlite"
@@ -51,7 +52,8 @@ func main() {
 		)
 	app.
 		WithScope("auth", authScope).
-		WithController(controllers.NewAuthController(authService, sessionService, logger))
+		WithController(controllers.NewAuthController(authService, sessionService, logger)).
+		WithRoute("/public/", http.FileServer(http.Dir("public")))
 
 	if err := app.Run(); err != nil {
 		panic(err)

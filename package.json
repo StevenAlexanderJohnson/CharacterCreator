@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "@tailwindcss/cli": "^4.1.12",
+    "tailwindcss": "^4.1.12"
+  },
+  "scripts": {
+    "dev": "tailwindcss -i ./tailwind.css -o ./public/css/site.css --watch"
+  }
+}
