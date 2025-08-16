@@ -2,9 +2,8 @@ package internal
 
 import (
 	"errors"
+	"fmt"
 	"os"
-
-	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -12,46 +11,62 @@ var (
 )
 
 type LLMConfig struct {
-	URL                    string `yaml:"url"`
-	ApiKey                 string `yaml:"api-key"`
-	AdditionalSystemPrompt string `yaml:"additional-system-prompt"`
+	URL                    string
+	ApiKey                 string
+	AdditionalSystemPrompt string
 }
 
-func (l *LLMConfig) validate() error {
-	if l.URL == "" {
-		return ErrEmptyLLMUrl
+func LoadLLMConfigEnv() (*LLMConfig, error) {
+	url := os.Getenv("LLM_URL")
+	if url == "" {
+		return nil, fmt.Errorf("no llm db url was provided")
 	}
+	apiKey := os.Getenv("LLM_API_KEY")
+	if apiKey == "" {
+		return nil, fmt.Errorf("no llm db api key was provided")
+	}
+	systemPrompt := os.Getenv("LLM_SYSTEM_PROMPT")
 
-	return nil
+	return &LLMConfig{
+		URL:                    url,
+		ApiKey:                 apiKey,
+		AdditionalSystemPrompt: systemPrompt,
+	}, nil
+}
+
+type DbConfig struct {
+	SqlitePath string
+}
+
+func LoadDbConfigEnv() (*DbConfig, error) {
+	dbFilePath := os.Getenv("DB_FILE_PATH")
+	if dbFilePath == "" {
+		return nil, fmt.Errorf("no db file path provided")
+	}
+	return &DbConfig{
+		SqlitePath: dbFilePath,
+	}, nil
 }
 
 type AppConfig struct {
-	LLM LLMConfig `yaml:"llm"`
+	LLM *LLMConfig
+	DB  *DbConfig
 }
 
-func (a *AppConfig) validate() error {
-	if err := a.LLM.validate(); err != nil {
-		return err
-	}
+func ParseAppConfig() (*AppConfig, error) {
 
-	return nil
-}
-
-func ParseAppConfig(configPath string) (*AppConfig, error) {
-	config := AppConfig{}
-
-	file, err := os.ReadFile(configPath)
+	llmConfig, err := LoadLLMConfigEnv()
 	if err != nil {
 		return nil, err
 	}
 
-	if err := yaml.Unmarshal(file, &config); err != nil {
+	dbConfig, err := LoadDbConfigEnv()
+	if err != nil {
 		return nil, err
 	}
 
-	if err := config.validate(); err != nil {
-		return nil, err
-	}
-
-	return &config, nil
+	return &AppConfig{
+		llmConfig,
+		dbConfig,
+	}, nil
 }

@@ -75,22 +75,22 @@ func (s *AuthService) Create(data *models.Auth) (*models.Auth, error) {
 	return s.repo.Create(data)
 }
 
-func (s *AuthService) Get(user *models.Auth) (string, error) {
+func (s *AuthService) Get(user *models.Auth) (*models.Auth, string, error) {
 	data, err := s.repo.Get(user.Username)
 	if err != nil {
-		return "", fmt.Errorf("an error occurred while getting the user in auth service: %v", err)
+		return nil, "", fmt.Errorf("an error occurred while getting the user in auth service: %v", err)
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(data.HashedPassword), []byte(user.Password))
 	if err != nil {
-		return "", fmt.Errorf("user provided invalid password for user %d", data.ID)
+		return nil, "", fmt.Errorf("user provided invalid password for user %d", data.ID)
 	}
 
 	token, err := s.authenticator.GenerateToken(models.Claims{
 		Id: strconv.Itoa(data.ID),
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to create token for user %d", data.ID)
+		return nil, "", fmt.Errorf("failed to create token for user %d", data.ID)
 	}
 
-	return token, nil
+	return data, token, nil
 }

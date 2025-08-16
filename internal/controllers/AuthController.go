@@ -3,20 +3,23 @@ package controllers
 import (
 	"dndcc/internal/models"
 	"dndcc/internal/services"
+	"fmt"
 	"net/http"
 
 	"github.com/StevenAlexanderJohnson/grove"
 )
 
 type AuthController struct {
-	service *services.AuthService
-	logger  grove.ILogger
+	authService    *services.AuthService
+	sessionService *services.SessionService
+	logger         grove.ILogger
 }
 
-func NewAuthController(service *services.AuthService, logger grove.ILogger) *AuthController {
+func NewAuthController(service *services.AuthService, sessionService *services.SessionService, logger grove.ILogger) *AuthController {
 	return &AuthController{
-		service: service,
-		logger:  logger,
+		authService:    service,
+		sessionService: sessionService,
+		logger:         logger,
 	}
 }
 
@@ -32,19 +35,42 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 		grove.WriteErrorToResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	authToken, err := c.service.Get(data)
+	user, authToken, err := c.authService.Get(data)
 	if err != nil {
 		c.logger.Error(err.Error())
 		grove.WriteErrorToResponse(w, http.StatusNoContent, "")
 		return
 	}
+	if data.SessionToken != "" {
+		session, err := c.sessionService.Get(data.SessionToken)
+		if err != nil {
+			c.logger.Warning(fmt.Errorf("a log attempt for %s was attempted with invalid session: %v", data.SessionToken, err))
+			grove.WriteErrorToResponse(w, http.StatusNoContent, "")
+			return
+		}
+		if session.UserId != user.ID {
+			c.logger.Warning(fmt.Errorf("a log attempt for %s with session token was made from an invalid user %s: %v", user.Username, data.SessionToken, err))
+			grove.WriteErrorToResponse(w, http.StatusNoContent, "")
+			return
+		}
+	} else {
+		session, err := c.sessionService.Create(models.CreateNewSession(user.ID, r.UserAgent(), r.RemoteAddr))
+		if err != nil {
+			c.logger.Warning(fmt.Errorf("an error occurred while creating a new session: %v", err))
+			grove.WriteErrorToResponse(w, http.StatusInternalServerError, "")
+			return
+		}
+		data.SessionToken = session.Token
+	}
 
 	if err := grove.WriteJsonBodyToResponse(
 		w,
 		struct {
-			AuthToken string `json:"auth_token"`
+			AuthToken    string `json:"auth_token"`
+			SessionToken string `json:"session_token"`
 		}{
-			AuthToken: authToken,
+			AuthToken:    authToken,
+			SessionToken: data.SessionToken,
 		},
 	); err != nil {
 		c.logger.Error(err.Error())
@@ -59,7 +85,7 @@ func (c *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 		grove.WriteErrorToResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	newData, err := c.service.Create(data)
+	newData, err := c.authService.Create(data)
 	if err != nil {
 		grove.WriteErrorToResponse(w, http.StatusInternalServerError, err.Error())
 		return
