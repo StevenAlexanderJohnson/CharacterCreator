@@ -57,9 +57,9 @@ func (r *AuthRepository) Get(username string) (*models.Auth, error) {
 	err := r.db.QueryRow(query, username).Scan(&auth.ID, &auth.Username, &auth.HashedPassword, &auth.CreatedAt, &auth.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("auth record with username %d not found", username)
+			return nil, fmt.Errorf("auth record with username %s not found", username)
 		}
-		return nil, fmt.Errorf("failed to get auth record by username %d: %w", username, err)
+		return nil, fmt.Errorf("failed to get auth record by username %s: %w", username, err)
 	}
 
 	return &auth, nil
