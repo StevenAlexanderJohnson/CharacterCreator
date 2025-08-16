@@ -18,6 +18,11 @@ func init() {
 		"internal/templates/layouts/layout.html.tmpl",
 		"internal/templates/pages/auth.html.tmpl",
 	))
+
+	authTemplates["register"] = template.Must(template.ParseFiles(
+		"internal/templates/layouts/layout.html.tmpl",
+		"internal/templates/pages/register.html.tmpl",
+	))
 }
 
 type AuthController struct {
@@ -36,6 +41,8 @@ func NewAuthController(service *services.AuthService, sessionService *services.S
 
 func (c *AuthController) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /auth/login", c.LoginPage)
+	mux.HandleFunc("GET /auth/register", c.RegisterPage)
+	mux.HandleFunc("GET /auth/logout", c.Logout)
 	mux.HandleFunc("POST /auth/login", c.Login)
 	mux.HandleFunc("POST /auth/register", c.Register)
 }
@@ -51,9 +58,23 @@ func (c *AuthController) LoginPage(w http.ResponseWriter, r *http.Request) {
 		SessionId: session,
 		Error:     "",
 	}); err != nil {
+		c.logger.Error("an error occurred while rendering login page")
 		grove.WriteErrorToResponse(w, http.StatusInternalServerError, "")
 		return
 	}
+}
+
+func (c *AuthController) RegisterPage(w http.ResponseWriter, r *http.Request) {
+	if err := authTemplates["register"].Execute(w, &page.RegisterPageData{}); err != nil {
+		c.logger.Error("an error occurred while rendering register page")
+		grove.WriteErrorToResponse(w, http.StatusInternalServerError, "")
+		return
+	}
+}
+
+func (c *AuthController) Logout(w http.ResponseWriter, r *http.Request) {
+	clearAuthCookies(w)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
@@ -63,12 +84,17 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var data models.Auth
-	data.Username = r.FormValue("username")
-	data.Password = r.FormValue("password")
+	data.SessionToken = r.FormValue("SessionId")
+	data.Username = r.FormValue("Username")
+	data.Password = r.FormValue("Password")
 	user, authToken, err := c.authService.Get(&data)
 	if err != nil {
 		c.logger.Error(err.Error())
-		grove.WriteErrorToResponse(w, http.StatusNoContent, "")
+		pageData := page.LoginData{SessionId: data.SessionToken, Error: "We could not log you in, please check your credentials and try again."}
+		if err := authTemplates["login"].Execute(w, &pageData); err != nil {
+			c.logger.Error(err.Error())
+			grove.WriteErrorToResponse(w, http.StatusInternalServerError, "")
+		}
 		return
 	}
 	if data.SessionToken != "" {
@@ -93,20 +119,10 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 		data.SessionToken = session.Token
 	}
 
-	if err := grove.WriteJsonBodyToResponse(
-		w,
-		struct {
-			AuthToken    string `json:"auth_token"`
-			SessionToken string `json:"session_token"`
-		}{
-			AuthToken:    authToken,
-			SessionToken: data.SessionToken,
-		},
-	); err != nil {
-		c.logger.Error(err.Error())
-		grove.WriteErrorToResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	setAuthCookie(w, authToken)
+	setSessionCookie(w, data.SessionToken)
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func (c *AuthController) Register(w http.ResponseWriter, r *http.Request) {

@@ -1,13 +1,22 @@
 {{define "title"}}Login{{end}}
 
 {{define "content"}}
-<h2>Login</h2>
-{{if .Error}}
+<div class="h-full flex flex-col gap-10 items-center justify-center">
+    <h2>Login</h2>
+    {{if .Error}}
     <div class="error">{{.Error}}</div>
-{{end}}
-<form action="/auth/login" method="post">
-    <input type="text" id="SessionId" value="{{.SessionId}}" disabled />
-    <input type="text" id="Username" placeholder="Username" />
-    <input type="text" id="Password" placeholder="Password" />
-</form>
+    {{end}}
+    <form action="/auth/login" method="post" class="grid grid-cols-2 gap-4 bg-primary rounded-2xl p-10"
+        autocomplete="off">
+
+        <input type="hidden" name="SessionId" id="SessionId" value="{{.SessionId}}" class="sr-only" />
+        <label for="Username" class="text-background">Username</label>
+        <input type="text" name="Username" id="Username" class="text-background bg-accent p-2" placeholder="Username" />
+        <label for="Password" class="text-background">Password</label>
+        <input type="password" name="Password" id="Password" class="text-background bg-accent p-2" placeholder="Password" />
+        <button type="submit" class="col-span-2 bg-secondary rounded-lg p-2 hover:bg-secondary/80">Login</button>
+
+        <a href="/auth/register" class="col-span-2 text-center text-background hover:underline">Register</a>
+    </form>
+</div>
 {{end}}

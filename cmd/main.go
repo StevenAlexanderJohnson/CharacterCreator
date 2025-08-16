@@ -40,19 +40,10 @@ func main() {
 	sessionRepo := repositories.NewSessionRepository(db)
 	sessionService := services.NewSessionService(sessionRepo)
 
-	authScope := grove.NewScope().
-		WithMiddleware(
-			grove.DefaultAuthMiddleware(
-				authenticator,
-				logger,
-				func() models.Claims {
-					return models.Claims{}
-				},
-			),
-		)
 	app.
-		WithScope("auth", authScope).
+		WithMiddleware(grove.DefaultRequestLoggerMiddleware(logger)).
 		WithController(controllers.NewAuthController(authService, sessionService, logger)).
+		WithController(controllers.NewHomeController(logger)).
 		WithRoute("/public/", http.FileServer(http.Dir("public")))
 
 	if err := app.Run(); err != nil {

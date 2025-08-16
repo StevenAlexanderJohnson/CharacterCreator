@@ -1,0 +1,11 @@
+{{define "content"}}
+<div class="h-full flex flex-col gap-10 items-center justify-center">
+    <h2>Home</h2>
+    <p>Welcome to the Character Creator!</p>
+    {{if not .Authenticated}}
+    <p>Please <a href="/auth/login" class="text-primary hover:underline">login</a> or <a href="/auth/register"
+            class="text-primary hover:underline">register</a> to get started.</p>
+    {{end}}
+    <p>Explore the features and create your characters with ease.</p>
+</div>
+{{end}}
