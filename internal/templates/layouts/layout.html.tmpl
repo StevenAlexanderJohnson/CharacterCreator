@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-background text-text">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +8,23 @@
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js"></script>
     <title>{{block "title" .}}Character Creator{{end}}</title>
 </head>
-<body class="h-full">
-    {{block "content" .Data}}{{end}}
+
+<body class="h-full flex flex-col">
+    {{if .User}}
+    <div class="p-10 flex justify-between items-center">
+        <h1 class="text-3xl font-bold">Character Creator</h1>
+        <nav class="flex gap-4">
+            <a href="/characters" class="text-lg">Characters</a>
+            <a href="/auth/logout" class="text-lg">Logout</a>
+            <span class="text-lg">Welcome, {{.User.Username}}</span>
+        </nav>
+    </div>
+    {{end}}
+    <div class="flex-1 container mx-auto px-4 relative">
+        <div class="absolute inset-0">
+            {{block "content" .Data}}{{end}}
+        </div>
+    </div>
 </body>
+
 </html>
