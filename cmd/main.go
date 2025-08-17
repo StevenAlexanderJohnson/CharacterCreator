@@ -32,7 +32,7 @@ func main() {
 		panic(err)
 	}
 
-	authenticator := grove.NewAuthenticator[models.Claims](authConfig)
+	authenticator := grove.NewAuthenticator[*models.Claims](authConfig)
 
 	authRepo := repositories.NewAuthRepository(db)
 	authService := services.NewAuthService(authRepo, authenticator)
@@ -43,7 +43,7 @@ func main() {
 	app.
 		WithMiddleware(grove.DefaultRequestLoggerMiddleware(logger)).
 		WithController(controllers.NewAuthController(authService, sessionService, logger)).
-		WithController(controllers.NewHomeController(logger)).
+		WithController(controllers.NewHomeController(logger, authenticator)).
 		WithRoute("/public/", http.FileServer(http.Dir("public")))
 
 	if err := app.Run(); err != nil {

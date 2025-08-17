@@ -7,18 +7,20 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/StevenAlexanderJohnson/grove"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
 	repo          *repositories.AuthRepository
-	authenticator *grove.Authenticator[models.Claims]
+	authenticator *grove.Authenticator[*models.Claims]
 }
 
-func NewAuthService(repo *repositories.AuthRepository, authenticator *grove.Authenticator[models.Claims]) *AuthService {
+func NewAuthService(repo *repositories.AuthRepository, authenticator *grove.Authenticator[*models.Claims]) *AuthService {
 	return &AuthService{repo: repo, authenticator: authenticator}
 }
 
@@ -85,8 +87,17 @@ func (s *AuthService) Get(user *models.Auth) (*models.Auth, string, error) {
 		return nil, "", fmt.Errorf("user provided invalid password for user %d", data.ID)
 	}
 
-	token, err := s.authenticator.GenerateToken(models.Claims{
-		Id: strconv.Itoa(data.ID),
+	token, err := s.authenticator.GenerateToken(&models.Claims{
+		Id:       strconv.Itoa(data.ID),
+		Username: data.Username,
+		RegisteredClaims: &jwt.RegisteredClaims{
+			Issuer:    s.authenticator.Issuer,
+			Subject:   data.Username,
+			Audience:  s.authenticator.Audience,
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.authenticator.Lifetime)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+		},
 	})
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to create token for user %d", data.ID)
