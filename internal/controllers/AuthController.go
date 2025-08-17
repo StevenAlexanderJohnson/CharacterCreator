@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"time"
 
 	"github.com/StevenAlexanderJohnson/grove"
 )
@@ -90,7 +91,7 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 	data.SessionToken = r.FormValue("SessionId")
 	data.Username = r.FormValue("Username")
 	data.Password = r.FormValue("Password")
-	user, authToken, err := c.authService.Get(&data)
+	user, authToken, duration, err := c.authService.Get(&data)
 	if err != nil {
 		c.logger.Error(err.Error())
 		pageData := page.NewPageData(false, nil, page.LoginData{
@@ -126,8 +127,8 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 		data.SessionToken = session.Token
 	}
 
-	setAuthCookie(w, authToken)
-	setSessionCookie(w, data.SessionToken)
+	SetAuthCookie(w, authToken, duration)
+	SetSessionCookie(w, data.SessionToken, time.Duration(24*time.Hour))
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }

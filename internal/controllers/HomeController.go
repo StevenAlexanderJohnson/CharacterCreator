@@ -39,28 +39,13 @@ func (h *HomeController) Index(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	token, err := getAuthCookie(r)
-	authenticated := false
-	if err == nil {
-		authenticated = true
-	}
 
-	var claims *models.Claims = nil
-	if authenticated {
-		var verifyErr error
-		claims, verifyErr = h.authenticator.VerifyToken(token, &models.Claims{})
-		if verifyErr != nil {
-			if authenticated {
-				h.logger.Warning("somehow showing authenticated on home but without claims")
-			}
-			authenticated = false
-		}
-	}
+	claims, ok := r.Context().Value(grove.AuthTokenKey).(*models.Claims)
 
 	pageData := page.PageData[page.HomePageData]{
-		IsAuthenticated: authenticated,
+		IsAuthenticated: ok,
 		User:            claims,
-		Data:            page.HomePageData{Authenticated: authenticated},
+		Data:            page.HomePageData{Authenticated: ok},
 	}
 
 	if err := homePages["index"].Execute(w, pageData); err != nil {

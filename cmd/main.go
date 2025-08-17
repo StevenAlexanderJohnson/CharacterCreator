@@ -4,6 +4,7 @@ import (
 	"dndcc/internal"
 	"dndcc/internal/controllers"
 	"dndcc/internal/database"
+	"dndcc/internal/middleware"
 	"dndcc/internal/models"
 	"dndcc/internal/repositories"
 	"dndcc/internal/services"
@@ -40,8 +41,12 @@ func main() {
 	sessionRepo := repositories.NewSessionRepository(db)
 	sessionService := services.NewSessionService(sessionRepo)
 
+	authWithRefreshMiddleware := middleware.
+		NewAuthWithRefreshMiddleware(logger, *authenticator, sessionService, authService).
+		WithRouteException("/").WithRouteException("/auth/login").WithRouteException("/auth/register")
 	app.
 		WithMiddleware(grove.DefaultRequestLoggerMiddleware(logger)).
+		WithMiddleware(authWithRefreshMiddleware.Middleware).
 		WithController(controllers.NewAuthController(authService, sessionService, logger)).
 		WithController(controllers.NewHomeController(logger, authenticator)).
 		WithRoute("/public/", http.FileServer(http.Dir("public")))

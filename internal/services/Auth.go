@@ -62,6 +62,21 @@ func validatePasswordRequirements(password string) error {
 	return nil
 }
 
+func (s *AuthService) generateToken(user *models.Auth) (string, error) {
+	return s.authenticator.GenerateToken(&models.Claims{
+		Id:       strconv.Itoa(user.ID),
+		Username: user.Username,
+		RegisteredClaims: &jwt.RegisteredClaims{
+			Issuer:    s.authenticator.Issuer,
+			Subject:   user.Username,
+			Audience:  s.authenticator.Audience,
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.authenticator.Lifetime)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+		},
+	})
+}
+
 func (s *AuthService) Create(data *models.Auth) (*models.Auth, error) {
 	if strings.TrimSpace(data.Username) == "" {
 		return nil, fmt.Errorf("username is required")
@@ -77,31 +92,34 @@ func (s *AuthService) Create(data *models.Auth) (*models.Auth, error) {
 	return s.repo.Create(data)
 }
 
-func (s *AuthService) Get(user *models.Auth) (*models.Auth, string, error) {
+func (s *AuthService) Get(user *models.Auth) (*models.Auth, string, time.Duration, error) {
 	data, err := s.repo.Get(user.Username)
 	if err != nil {
-		return nil, "", fmt.Errorf("an error occurred while getting the user in auth service: %v", err)
+		return nil, "", 0, fmt.Errorf("an error occurred while getting the user in auth service: %v", err)
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(data.HashedPassword), []byte(user.Password))
 	if err != nil {
-		return nil, "", fmt.Errorf("user provided invalid password for user %d", data.ID)
+		return nil, "", 0, fmt.Errorf("user provided invalid password for user %d", data.ID)
 	}
 
-	token, err := s.authenticator.GenerateToken(&models.Claims{
-		Id:       strconv.Itoa(data.ID),
-		Username: data.Username,
-		RegisteredClaims: &jwt.RegisteredClaims{
-			Issuer:    s.authenticator.Issuer,
-			Subject:   data.Username,
-			Audience:  s.authenticator.Audience,
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.authenticator.Lifetime)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
-		},
-	})
+	token, err := s.generateToken(data)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to create token for user %d", data.ID)
+		return nil, "", 0, fmt.Errorf("failed to create token for user %d: %v", data.ID, err)
 	}
 
-	return data, token, nil
+	return data, token, s.authenticator.Lifetime, nil
+}
+
+func (s *AuthService) GetTokenById(userId int) (string, time.Duration, error) {
+	data, err := s.repo.GetId(userId)
+	if err != nil {
+		return "", 0, fmt.Errorf("an error occurred while getting user's data by id")
+	}
+
+	token, err := s.generateToken(data)
+	if err != nil {
+		return "", 0, fmt.Errorf("failed tdo create token when getting user by id: %v", err)
+	}
+
+	return token, s.authenticator.Lifetime, nil
 }
