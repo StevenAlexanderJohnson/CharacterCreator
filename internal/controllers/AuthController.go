@@ -12,31 +12,30 @@ import (
 	"github.com/StevenAlexanderJohnson/grove"
 )
 
-var authTemplates = make(map[string]*template.Template)
-
-func init() {
-	authTemplates["login"] = template.Must(template.ParseFiles(
-		"internal/templates/layouts/layout.html.tmpl",
-		"internal/templates/pages/auth.html.tmpl",
-	))
-
-	authTemplates["register"] = template.Must(template.ParseFiles(
-		"internal/templates/layouts/layout.html.tmpl",
-		"internal/templates/pages/register.html.tmpl",
-	))
-}
-
 type AuthController struct {
 	authService    *services.AuthService
 	sessionService *services.SessionService
 	logger         grove.ILogger
+	pageTemplates  map[string]*template.Template
 }
 
 func NewAuthController(service *services.AuthService, sessionService *services.SessionService, logger grove.ILogger) *AuthController {
+	pageTemplates := make(map[string]*template.Template)
+
+	pageTemplates["login"] = template.Must(template.ParseFiles(
+		"internal/templates/layouts/layout.html.tmpl",
+		"internal/templates/pages/auth.html.tmpl",
+	))
+
+	pageTemplates["register"] = template.Must(template.ParseFiles(
+		"internal/templates/layouts/layout.html.tmpl",
+		"internal/templates/pages/register.html.tmpl",
+	))
 	return &AuthController{
 		authService:    service,
 		sessionService: sessionService,
 		logger:         logger,
+		pageTemplates:  pageTemplates,
 	}
 }
 
@@ -60,7 +59,7 @@ func (c *AuthController) LoginPage(w http.ResponseWriter, r *http.Request) {
 		SessionId: session,
 		Error:     "",
 	})
-	if err := authTemplates["login"].Execute(w, pageData); err != nil {
+	if err := c.pageTemplates["login"].Execute(w, pageData); err != nil {
 		c.logger.Error("an error occurred while rendering login page")
 		grove.WriteErrorToResponse(w, http.StatusInternalServerError, "")
 		return
@@ -69,7 +68,7 @@ func (c *AuthController) LoginPage(w http.ResponseWriter, r *http.Request) {
 
 func (c *AuthController) RegisterPage(w http.ResponseWriter, r *http.Request) {
 	pageData := page.NewPageData(false, nil, &page.RegisterPageData{})
-	if err := authTemplates["register"].Execute(w, pageData); err != nil {
+	if err := c.pageTemplates["register"].Execute(w, pageData); err != nil {
 		c.logger.Error("an error occurred while rendering register page")
 		grove.WriteErrorToResponse(w, http.StatusInternalServerError, "")
 		return
@@ -99,7 +98,7 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 			SessionId: data.SessionToken,
 			Error:     "We could not log you in, please check your credentials and try again.",
 		})
-		if err := authTemplates["login"].Execute(w, &pageData); err != nil {
+		if err := c.pageTemplates["login"].Execute(w, &pageData); err != nil {
 			c.logger.Error(err.Error())
 			grove.WriteErrorToResponse(w, http.StatusInternalServerError, "")
 		}

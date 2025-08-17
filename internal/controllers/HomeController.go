@@ -9,24 +9,23 @@ import (
 	"github.com/StevenAlexanderJohnson/grove"
 )
 
-var homePages = make(map[string]*template.Template)
-
-func init() {
-	homePages["index"] = template.Must(template.ParseFiles(
-		"internal/templates/layouts/layout.html.tmpl",
-		"internal/templates/pages/home.html.tmpl",
-	))
-}
-
 type HomeController struct {
 	logger        grove.ILogger
 	authenticator *grove.Authenticator[*models.Claims]
+	pageTemplates map[string]*template.Template
 }
 
 func NewHomeController(logger grove.ILogger, authenticator *grove.Authenticator[*models.Claims]) *HomeController {
+	pageTemplates := make(map[string]*template.Template)
+	pageTemplates["index"] = template.Must(template.ParseFiles(
+		"internal/templates/layouts/layout.html.tmpl",
+		"internal/templates/pages/home.html.tmpl",
+	))
+
 	return &HomeController{
 		logger,
 		authenticator,
+		pageTemplates,
 	}
 }
 
@@ -48,7 +47,7 @@ func (h *HomeController) Index(w http.ResponseWriter, r *http.Request) {
 		Data:            page.HomePageData{Authenticated: ok},
 	}
 
-	if err := homePages["index"].Execute(w, pageData); err != nil {
+	if err := h.pageTemplates["index"].Execute(w, pageData); err != nil {
 		h.logger.Error("an error occurred while rendering home page")
 		grove.WriteErrorToResponse(w, http.StatusInternalServerError, "")
 		return
