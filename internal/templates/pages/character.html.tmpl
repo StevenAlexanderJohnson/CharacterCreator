@@ -1,0 +1,30 @@
+{{define "content"}}
+<div class="flex flex-col">
+    <div class="flex flex-row gap-8">
+        <div class="flex flex-col gap-4">
+            {{template "statCard" (statCard "STR" .StatBlock.Strength (.StatBlock.GetAbilityScore "Strength"))}}
+            {{template "statCard" (statCard "DEX" .StatBlock.Dexterity (.StatBlock.GetAbilityScore "Dexterity"))}}
+            {{template "statCard" (statCard "CON" .StatBlock.Constitution (.StatBlock.GetAbilityScore "Constitution"))}}
+            {{template "statCard" (statCard "INT" .StatBlock.Intelligence (.StatBlock.GetAbilityScore "Intelligence"))}}
+            {{template "statCard" (statCard "WIS" .StatBlock.Wisdom (.StatBlock.GetAbilityScore "Wisdom"))}}
+            {{template "statCard" (statCard "CHA" .StatBlock.Charisma (.StatBlock.GetAbilityScore "Charisma"))}}
+        </div>
+        <div class="flex-1 flex flex-col gap-2">
+            <div class="flex gap-4">
+                <span class="border border-accent p-2">Name: {{.Name}}</span>
+                <span class="border border-accent p-2">Background: {{.Background.Name}}</span>
+                <span class="border border-accent p-2">Class: {{.Class}}</span>
+                <span class="border border-accent p-2">Level: {{.Level}}</span>
+                <span class="border border-accent p-2">Race: {{.Race.Type}}</span>
+                <span class="border border-accent p-2">Subrace: {{.Race.Subrace}}</span>
+            </div>
+            <div class="flex gap-4">
+                <span class="border border-accent p-2">Armor Class: {{.GetArmorClass}}</span>
+                <span class="border border-accent p-2">Initiative: {{.GetInitiative}}</span>
+                <span class="border border-accent p-2">Move Speed: {{.GetMoveSpeed}}</span>
+                <span class="border border-accent p-2">Proficiency Bonus: {{.GetProficiencyBonus}}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}

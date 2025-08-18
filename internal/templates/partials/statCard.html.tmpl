@@ -1,0 +1,14 @@
+{{define "statCard"}}
+<div class="border border-accent flex flex-col p-2">
+    <span class="text-center">
+        {{.Name}}
+    </span>
+    <span class="flex-1 flex justify-center items-center">
+        {{.Score}}
+    </span>
+    <span class="text-center">
+        {{$modifier := .Modifier}}
+        {{if gt $modifier 0}}+{{end}}{{$modifier}}
+    </span>
+</div>
+{{end}}

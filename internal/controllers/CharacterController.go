@@ -4,6 +4,7 @@ import (
 	"dndcc/internal/models"
 	"dndcc/internal/models/page"
 	"dndcc/internal/services"
+	"fmt"
 	"html/template"
 	"net/http"
 	"strconv"
@@ -19,6 +20,15 @@ type CharacterController struct {
 
 func NewCharacterController(logger grove.ILogger, service *services.CharacterService) *CharacterController {
 	pageTemplates := make(map[string]*template.Template)
+	funcMap := template.FuncMap{
+		"statCard": func(name string, score int, modifier int) map[string]interface{} {
+			return map[string]interface{}{
+				"Name":     name,
+				"Score":    score,
+				"Modifier": modifier,
+			}
+		},
+	}
 
 	pageTemplates["list"] = template.Must(template.ParseFiles(
 		"internal/templates/layouts/layout.html.tmpl",
@@ -28,6 +38,12 @@ func NewCharacterController(logger grove.ILogger, service *services.CharacterSer
 	pageTemplates["new"] = template.Must(template.ParseFiles(
 		"internal/templates/layouts/layout.html.tmpl",
 		"internal/templates/pages/characterEdit.html.tmpl",
+	))
+
+	pageTemplates["character"] = template.Must(template.New("character").Funcs(funcMap).ParseFiles(
+		"internal/templates/layouts/layout.html.tmpl",
+		"internal/templates/partials/statCard.html.tmpl",
+		"internal/templates/pages/character.html.tmpl",
 	))
 
 	return &CharacterController{
@@ -71,15 +87,13 @@ func (c *CharacterController) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data.OwnerId = claims.UserId
-	newData, err := c.service.Create(data)
+	_, err = c.service.Create(data)
 	if err != nil {
 		grove.WriteErrorToResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if err := grove.WriteJsonBodyToResponse(w, newData); err != nil {
-		grove.WriteErrorToResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+
+	http.Redirect(w, r, fmt.Sprintf("/character/%d", data.ID), http.StatusSeeOther)
 }
 
 func (c *CharacterController) GetAll(w http.ResponseWriter, r *http.Request) {
@@ -146,8 +160,11 @@ func (c *CharacterController) GetByID(w http.ResponseWriter, r *http.Request) {
 		grove.WriteErrorToResponse(w, http.StatusNotFound, "Item not found")
 		return
 	}
-	if err := grove.WriteJsonBodyToResponse(w, item); err != nil {
-		grove.WriteErrorToResponse(w, http.StatusInternalServerError, err.Error())
+
+	pageData := page.NewPageData(ok, claims, item.ToCharacterSheet())
+	if err := c.pageTemplates["character"].ExecuteTemplate(w, "layout.html.tmpl", pageData); err != nil {
+		c.logger.Error("an error occurred while rendering character page", err)
+		grove.WriteErrorToResponse(w, http.StatusInternalServerError, "")
 		return
 	}
 }
