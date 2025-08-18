@@ -41,6 +41,9 @@ func main() {
 	sessionRepo := repositories.NewSessionRepository(db)
 	sessionService := services.NewSessionService(sessionRepo)
 
+	characterRepo := repositories.NewCharacterRepository(db)
+	characterService := services.NewCharacterService(characterRepo)
+
 	authWithRefreshMiddleware := middleware.
 		NewAuthWithRefreshMiddleware(logger, *authenticator, sessionService, authService).
 		WithRouteException("/").WithRouteException("/auth/login").WithRouteException("/auth/register")
@@ -49,6 +52,7 @@ func main() {
 		WithMiddleware(authWithRefreshMiddleware.Middleware).
 		WithController(controllers.NewAuthController(authService, sessionService, logger)).
 		WithController(controllers.NewHomeController(logger, authenticator)).
+		WithController(controllers.NewCharacterController(logger, characterService)).
 		WithRoute("/public/", http.FileServer(http.Dir("public")))
 
 	if err := app.Run(); err != nil {

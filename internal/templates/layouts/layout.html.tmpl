@@ -12,9 +12,9 @@
 <body class="h-full flex flex-col">
     {{if .User}}
     <div class="p-10 flex justify-between items-center">
-        <h1 class="text-3xl font-bold">Character Creator</h1>
+        <a href="/" class="text-3xl font-bold">Character Creator</a>
         <nav class="flex gap-4">
-            <a href="/characters" class="text-lg">Characters</a>
+            <a href="/character" class="text-lg">Characters</a>
             <a href="/auth/logout" class="text-lg">Logout</a>
             <span class="text-lg">Welcome, {{.User.Username}}</span>
         </nav>
@@ -26,5 +26,7 @@
         </div>
     </div>
 </body>
+
+{{block "script" .}}{{end}}
 
 </html>

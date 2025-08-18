@@ -1,0 +1,120 @@
+{{define "content"}}
+<form method="{{.Method}}" action="{{.Action}}" class="flex justify-center items-center">
+    <div class="grid grid-cols-2 p-8 gap-4 items-center">
+        <input type="text" class="sr-only" value="{{.Character.ID}}" />
+
+        {{if .Error}}
+        <span class="text-red-500">{{.Error}}</span>
+        {{end}}
+
+        <button type="button" class="col-span-2 bg-primary p-2 rounded-lg max-w-fit hover:cursor-pointer">Generate
+            Background</button>
+
+        <label for="Name">Name</label>
+        <input type="text" name="Name" id="Name" value="{{.Character.Name}}" class="border border-primary p-2"
+            required />
+
+        <label for="Bio">Bio</label>
+        <textarea name="Bio" id="Bio" class="border border-primary p-2">{{.Character.Bio}}</textarea>
+
+        <label for="Background">Background</label>
+        <div class="flex flex-col gap-2">
+            <input type="text" name="Background" id="Background" value="{{.Character.Background}}"
+                class="border border-primary p-2 sr-only" required />
+            <select id="BackgroundSelect" value="{{.Character.Background}}" class="border border-primary p-2" required>
+                <option value="" disabled selected></option>
+                {{range .BackgroundOptions}}
+                <option value="{{.}}" class="bg-secondary">{{.}}</option>
+                {{end}}
+                <option value="-1" class="bg-secondary">Custom</option>
+            </select>
+        </div>
+
+        <label for="Level">Level</label>
+        <input type="number" step="1" min="1" max="20" name="Level" id="Level" value="{{.Character.Level}}"
+            class="border border-primary p-2" required />
+
+        <label for="ClassSelect">Class</label>
+        <select id="ClassSelect" name="ClassSelect" value="{{.Character.Class}}" class="border border-primary p-2" required>
+            <option value="" disabled selected></option>
+            {{range .ClassOptions}}
+            <option value="{{.}}" class="bg-secondary">{{.}}</option>
+            {{end}}
+        </select>
+
+        <label for="RaceType">Race</label>
+        <div class="flex flex-col gap-2">
+            <input type="text" name="RaceType" id="RaceType" value="{{.Character.RaceType}}"
+                class="border border-primary p-2 sr-only" required />
+            <select id="RaceSelect" value="{{.Character.RaceType}}" class="border border-primary p-2" required>
+                <option value="" disabled selected></option>
+                {{range .RaceOptions}}
+                <option value="{{.}}" class="bg-secondary">{{.}}</option>
+                {{end}}
+                <option value="-1" class="bg-secondary">Custom</option>
+            </select>
+        </div>
+
+        <label for="SubraceType">Subrace</label>
+        <div class="flex flex-col gap-2">
+            <input type="text" name="SubraceType" id="SubraceType" value="{{.Character.SubraceType.String}}"
+                class="border border-primary p-2 sr-only" required />
+            <select id="SubraceSelect" value="{{.Character.SubraceType.String}}" class="border border-primary p-2"
+                required>
+                <option value="" disabled selected></option>
+                {{range .SubraceOptions}}
+                <option value="{{.}}" class="bg-secondary">{{.}}</option>
+                {{end}}
+                <option value="-1" class="bg-secondary">Custom</option>
+            </select>
+        </div>
+
+        <label for="RaceMoveSpeed">Move Speed</label>
+        <input type="text" name="RaceMoveSpeed" id="RaceMoveSpeed" value="{{.Character.RaceMoveSpeed}}"
+            class="border border-primary p-2" />
+
+        <label for="Strength">Strength</label>
+        <input type="text" name="Strength" id="Strength" value="{{.Character.Strength}}"
+            class="border border-primary p-2" required />
+        <label for="Dexterity">Dexterity</label>
+        <input type="text" name="Dexterity" id="Dexterity" value="{{.Character.Dexterity}}"
+            class="border border-primary p-2" required />
+        <label for="Constitution">Constitution</label>
+        <input type="text" name="Constitution" id="Constitution" value="{{.Character.Constitution}}"
+            class="border border-primary p-2" required />
+        <label for="Intelligence">Intelligence</label>
+        <input type="text" name="Intelligence" id="Intelligence" value="{{.Character.Intelligence}}"
+            class="border border-primary p-2" required />
+        <label for="Wisdom">Wisdom</label>
+        <input type="text" name="Wisdom" id="Wisdom" value="{{.Character.Wisdom}}" class="border border-primary p-2"
+            required />
+        <label for="Charisma">Charisma</label>
+        <input type="text" name="Charisma" id="Charisma" value="{{.Character.Charisma}}"
+            class="border border-primary p-2" required />
+
+        <button type="submit" class="col-span-2 bg-primary p-2 rounded-lg">Create</button>
+    </div>
+</form>
+{{end}}
+
+{{define "script"}}
+<script>
+    function setupSelectListener(selectName, inputName) {
+        document.getElementById(selectName).addEventListener('change', (event) => {
+            let classInput = document.getElementById(inputName);
+            if (event.target.value === "-1") {
+                classInput.value = '';
+                classInput.classList.remove('sr-only');
+                return;
+            }
+            classInput.value = event.target.value;
+            classInput.classList.add('sr-only');
+        });
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+        setupSelectListener("RaceSelect", "RaceType");
+        setupSelectListener("SubraceSelect", "SubraceType");
+        setupSelectListener('BackgroundSelect', 'Background')
+    });
+</script>
+{{end}}

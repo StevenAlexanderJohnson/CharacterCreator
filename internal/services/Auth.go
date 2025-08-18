@@ -5,7 +5,6 @@ import (
 	"dndcc/internal/repositories"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -64,7 +63,7 @@ func validatePasswordRequirements(password string) error {
 
 func (s *AuthService) generateToken(user *models.Auth) (string, error) {
 	return s.authenticator.GenerateToken(&models.Claims{
-		Id:       strconv.Itoa(user.ID),
+		UserId:   user.ID,
 		Username: user.Username,
 		RegisteredClaims: &jwt.RegisteredClaims{
 			Issuer:    s.authenticator.Issuer,
