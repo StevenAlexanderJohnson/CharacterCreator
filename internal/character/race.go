@@ -177,7 +177,7 @@ func (r *Race) GetAbilityIncrease() ([]StatIncrease, error) {
 	if subraceIncrease, err := r.Subrace.getAbilityIncrease(); err != nil {
 		return nil, err
 	} else if subraceIncrease != nil {
-		increase = subraceIncrease
+		increase = append(increase, subraceIncrease...)
 	}
 
 	return increase, nil
