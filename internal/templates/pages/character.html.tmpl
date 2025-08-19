@@ -13,6 +13,7 @@
                 {{template "statCard" (statCard "CHA" .StatBlock.Charisma (.StatBlock.GetAbilityScore "Charisma"))}}
             </div>
             <div class="p-4 border flex flex-col gap-2 max-w-fit">
+                <span class="text-center font-bold">Skills</span>
                 {{template "skill" (skill "Acrobatics" . "Dex")}}
                 {{template "skill" (skill "Animal Handling" . "Wis")}}
                 {{template "skill" (skill "Arcana" . "Int")}}
@@ -50,6 +51,7 @@
                     <span class="border border-accent p-2">Hit Points: {{.GetMaxHealthPoints}}</span>
                 </div>
                 <div class="p-4 border flex flex-col gap-2 max-w-fit max-h-fit">
+                    <span class="text-center font-bold">Saving Throws</span>
                     {{template "savingThrow" (savingThrow "Strength" .)}}
                     {{template "savingThrow" (savingThrow "Dexterity" .)}}
                     {{template "savingThrow" (savingThrow "Constitution" .)}}
