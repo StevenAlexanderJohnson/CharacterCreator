@@ -101,9 +101,9 @@ func initializeDatabase(db *sql.DB) error {
 		if err != nil {
 			return fmt.Errorf("%w: failed to begin transaction for %s: %v", ErrMigrationFailed, migrationFile, err)
 		}
+		defer tx.Rollback()
 
 		if _, err := tx.Exec(string(content)); err != nil {
-			tx.Rollback() // Roll back on error
 			return fmt.Errorf("%w: failed to execute migration %s: %v", ErrMigrationFailed, migrationFile, err)
 		}
 
@@ -112,7 +112,6 @@ func initializeDatabase(db *sql.DB) error {
 
 		// Record the applied migration in the migrations table
 		if _, err := tx.Exec("INSERT INTO migrations (name) VALUES (?)", name); err != nil {
-			tx.Rollback()
 			return fmt.Errorf("%w: failed to record migration %s: %v", ErrMigrationFailed, migrationFile, err)
 		}
 

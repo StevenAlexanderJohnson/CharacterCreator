@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"dndcc/internal/character"
 	"dndcc/internal/models"
 	"dndcc/internal/models/page"
 	"dndcc/internal/services"
@@ -28,6 +29,39 @@ func NewCharacterController(logger grove.ILogger, service *services.CharacterSer
 				"Modifier": modifier,
 			}
 		},
+		"skill": func(name string, char *character.Character, base character.StatName) map[string]interface{} {
+			skillName := character.SkillName(name)
+			hasProficiency := func() bool {
+				for _, prof := range char.Background.GetProficiencies() {
+					if prof == skillName {
+						return true
+					}
+				}
+				return false
+			}()
+			return map[string]interface{}{
+				"Name":           name,
+				"Bonus":          char.GetSkill(skillName),
+				"HasProficiency": hasProficiency,
+				"StatName":       base,
+			}
+		},
+		"savingThrow": func(stat character.StatName, char *character.Character) map[string]interface{} {
+			hasProficiency := func() bool {
+				for _, prof := range character.ClassBarbarian.GetSavingThrowsProficiencies() {
+					if prof == stat {
+						return true
+					}
+				}
+				return false
+			}()
+			bonus := char.GetSavingThrow(stat)
+			return map[string]interface{}{
+				"Name":           stat,
+				"HasProficiency": hasProficiency,
+				"Bonus":          bonus,
+			}
+		},
 	}
 
 	pageTemplates["list"] = template.Must(template.ParseFiles(
@@ -43,6 +77,8 @@ func NewCharacterController(logger grove.ILogger, service *services.CharacterSer
 	pageTemplates["character"] = template.Must(template.New("character").Funcs(funcMap).ParseFiles(
 		"internal/templates/layouts/layout.html.tmpl",
 		"internal/templates/partials/statCard.html.tmpl",
+		"internal/templates/partials/skill.html.tmpl",
+		"internal/templates/partials/savingThrow.html.tmpl",
 		"internal/templates/pages/character.html.tmpl",
 	))
 

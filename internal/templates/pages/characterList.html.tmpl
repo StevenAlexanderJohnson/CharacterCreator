@@ -1,9 +1,9 @@
 {{define "content"}}
 <div class="flex flex-col gap-4">
     <a href="/character/new" class="bg-primary p-3 rounded-2xl max-w-fit">New Character</a>
-    <div class="h-full overflow-auto">
+    <div class="h-full overflow-auto flex flex-col gap-4">
         {{range .}}
-        <p>{{.Name}}</p>
+        <a href="/character/{{.ID}}" target="_blank">{{.Name}}</a>
         {{else}}
         <p>No Characters found.</p>
         {{end}}

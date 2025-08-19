@@ -17,3 +17,9 @@
         --color-accent: #a1a1af;
     }
 }
+
+@layer utilities {
+    .checked-accent-primary:checked {
+        @apply bg-primary border-primary
+    }
+}

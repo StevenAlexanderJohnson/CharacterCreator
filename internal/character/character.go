@@ -44,8 +44,7 @@ func CharacterFromYaml(data []byte) (*Character, error) {
 		return nil, err
 	}
 	if character.CurrentHealthPoints == 0 {
-		hp, _ := character.GetMaxHealthPoints()
-		character.CurrentHealthPoints = hp
+		character.CurrentHealthPoints = character.GetMaxHealthPoints()
 	}
 	return &character, nil
 }
@@ -69,43 +68,33 @@ func (c *Character) GetProficiencyBonus() int {
 	return int(math.Floor(float64(c.Level-1)/float64(4))) + 2
 }
 
-func (c *Character) GetSavingThrow(stat StatName) (int, error) {
-	savingThrow, err := c.StatBlock.GetAbilityScore(stat)
-	if err != nil {
-		return 0, err
-	}
-	proficiencies, err := c.Class.GetSavingThrowsProficiencies()
-	if err != nil {
-		return 0, err
-	}
+func (c *Character) GetSavingThrow(stat StatName) int {
+	savingThrow := c.StatBlock.GetAbilityScore(stat)
+	proficiencies := c.Class.GetSavingThrowsProficiencies()
 	for _, prof := range proficiencies {
 		if prof == stat {
 			savingThrow += c.GetProficiencyBonus()
 			break
 		}
 	}
-	return savingThrow, nil
+	return savingThrow
 }
 
-func (c *Character) GetSkill(skill SkillName) (int, error) {
+func (c *Character) GetSkill(skill SkillName) int {
 	var bonus int
-	var err error
 	switch skill {
 	case SkillAthletics:
-		bonus, err = c.StatBlock.GetAbilityScore(StatStrength)
+		bonus = c.StatBlock.GetAbilityScore(StatStrength)
 	case SkillAcrobatics, SkillSleightOfHand, SkillStealth:
-		bonus, err = c.StatBlock.GetAbilityScore(StatDexterity)
+		bonus = c.StatBlock.GetAbilityScore(StatDexterity)
 	case SkillArcana, SkillHistory, SkillInvestigation, SkillNature, SkillReligion:
-		bonus, err = c.StatBlock.GetAbilityScore(StatIntelligence)
+		bonus = c.StatBlock.GetAbilityScore(StatIntelligence)
 	case SkillAnimalHandling, SkillInsight, SkillMedicine, SkillPerception, SkillSurvival:
-		bonus, err = c.StatBlock.GetAbilityScore(StatWisdom)
+		bonus = c.StatBlock.GetAbilityScore(StatWisdom)
 	case SkillDeception, SkillIntimidation, SkillPerformance, SkillPersuasion:
-		bonus, err = c.StatBlock.GetAbilityScore(StatCharisma)
+		bonus = c.StatBlock.GetAbilityScore(StatCharisma)
 	default:
-		return 0, ErrUndefinedSkill
-	}
-	if err != nil {
-		return 0, err
+		return 0
 	}
 
 	for _, proficiency := range c.Background.Proficiencies {
@@ -115,28 +104,22 @@ func (c *Character) GetSkill(skill SkillName) (int, error) {
 		}
 	}
 
-	return bonus, nil
+	return bonus
 }
 
-func (c *Character) GetMaxHealthPoints() (int, error) {
-	hitDie, err := c.Class.GetHitDie()
-	if err != nil {
-		return 0, err
-	}
-	// Discarding err because we are using developer defined stat
-	constitution, _ := c.GetAbilityScore(StatConstitution)
-	return int(hitDie)*c.Level + constitution, nil
+func (c *Character) GetMaxHealthPoints() int {
+	hitDie := c.Class.GetHitDie()
+	constitution := c.GetAbilityScore(StatConstitution)
+	return int(hitDie)*c.Level + constitution
 }
 
 func (c *Character) GetArmorClass() int {
-	// Discarding err because we are using developer defined stat
-	dex, _ := c.GetAbilityScore(StatDexterity)
+	dex := c.GetAbilityScore(StatDexterity)
 	return 10 + dex
 }
 
 func (c *Character) GetInitiative() int {
-	// Discarding err because we are using developer defined stat
-	dex, _ := c.GetAbilityScore(StatDexterity)
+	dex := c.GetAbilityScore(StatDexterity)
 	return dex
 }
 

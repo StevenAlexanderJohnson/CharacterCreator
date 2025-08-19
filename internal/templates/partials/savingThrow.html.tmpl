@@ -1,0 +1,14 @@
+{{define "savingThrow"}}
+<div class="flex gap-2">
+    {{if .HasProficiency}}
+    <span class="min-w-5 underline">&check;</span>
+    {{else}}
+    <span class="min-w-5 underline"></span>
+    {{end}}
+    <span class="min-w-5 underline">
+        {{$modifier := .Bonus}}
+        {{if gt $modifier 0}}+{{end}}{{$modifier}}
+    </span>
+    <span>{{.Name}}</span>
+</div>
+{{end}}

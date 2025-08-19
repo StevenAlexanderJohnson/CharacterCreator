@@ -1,28 +1,62 @@
 {{define "content"}}
-<div class="flex flex-col">
+<div class="flex flex-col justify-center items-center">
     <div class="flex flex-row gap-8">
-        <div class="flex flex-col gap-4">
-            {{template "statCard" (statCard "STR" .StatBlock.Strength (.StatBlock.GetAbilityScore "Strength"))}}
-            {{template "statCard" (statCard "DEX" .StatBlock.Dexterity (.StatBlock.GetAbilityScore "Dexterity"))}}
-            {{template "statCard" (statCard "CON" .StatBlock.Constitution (.StatBlock.GetAbilityScore "Constitution"))}}
-            {{template "statCard" (statCard "INT" .StatBlock.Intelligence (.StatBlock.GetAbilityScore "Intelligence"))}}
-            {{template "statCard" (statCard "WIS" .StatBlock.Wisdom (.StatBlock.GetAbilityScore "Wisdom"))}}
-            {{template "statCard" (statCard "CHA" .StatBlock.Charisma (.StatBlock.GetAbilityScore "Charisma"))}}
-        </div>
-        <div class="flex-1 flex flex-col gap-2">
-            <div class="flex gap-4">
-                <span class="border border-accent p-2">Name: {{.Name}}</span>
-                <span class="border border-accent p-2">Background: {{.Background.Name}}</span>
-                <span class="border border-accent p-2">Class: {{.Class}}</span>
-                <span class="border border-accent p-2">Level: {{.Level}}</span>
-                <span class="border border-accent p-2">Race: {{.Race.Type}}</span>
-                <span class="border border-accent p-2">Subrace: {{.Race.Subrace}}</span>
+        <div class="flex gap-4">
+            <div class="flex flex-col gap-4">
+                {{template "statCard" (statCard "STR" .StatBlock.Strength (.StatBlock.GetAbilityScore "Strength"))}}
+                {{template "statCard" (statCard "DEX" .StatBlock.Dexterity (.StatBlock.GetAbilityScore "Dexterity"))}}
+                {{template "statCard" (statCard "CON" .StatBlock.Constitution (.StatBlock.GetAbilityScore
+                "Constitution"))}}
+                {{template "statCard" (statCard "INT" .StatBlock.Intelligence (.StatBlock.GetAbilityScore
+                "Intelligence"))}}
+                {{template "statCard" (statCard "WIS" .StatBlock.Wisdom (.StatBlock.GetAbilityScore "Wisdom"))}}
+                {{template "statCard" (statCard "CHA" .StatBlock.Charisma (.StatBlock.GetAbilityScore "Charisma"))}}
             </div>
-            <div class="flex gap-4">
-                <span class="border border-accent p-2">Armor Class: {{.GetArmorClass}}</span>
-                <span class="border border-accent p-2">Initiative: {{.GetInitiative}}</span>
-                <span class="border border-accent p-2">Move Speed: {{.GetMoveSpeed}}</span>
-                <span class="border border-accent p-2">Proficiency Bonus: {{.GetProficiencyBonus}}</span>
+            <div class="p-4 border flex flex-col gap-2 max-w-fit">
+                {{template "skill" (skill "Acrobatics" . "Dex")}}
+                {{template "skill" (skill "Animal Handling" . "Wis")}}
+                {{template "skill" (skill "Arcana" . "Int")}}
+                {{template "skill" (skill "Athletics" . "Str")}}
+                {{template "skill" (skill "Deception" . "Cha")}}
+                {{template "skill" (skill "History" . "Int")}}
+                {{template "skill" (skill "Insight" . "Wis")}}
+                {{template "skill" (skill "Intimidation" . "Cha")}}
+                {{template "skill" (skill "Investigation" . "Int")}}
+                {{template "skill" (skill "Medicine" . "Wis")}}
+                {{template "skill" (skill "Nature" . "Int")}}
+                {{template "skill" (skill "Perception" . "Wis")}}
+                {{template "skill" (skill "Performance" . "Cha")}}
+                {{template "skill" (skill "Persuasion" . "Cha")}}
+                {{template "skill" (skill "Religion" . "Int")}}
+                {{template "skill" (skill "Sleight of Hand" . "Dex")}}
+                {{template "skill" (skill "Stealth" . "Dex")}}
+                {{template "skill" (skill "Survival" . "Wis")}}
+            </div>
+            <div class="flex-1 flex flex-col gap-2">
+                <div class="flex gap-4">
+                    <span class="border border-accent p-2">Name: {{.Name}}</span>
+                    <span class="border border-accent p-2">Background: {{.Background.Name}}</span>
+                    <span class="border border-accent p-2">Class: {{.Class}}</span>
+                    <span class="border border-accent p-2">Level: {{.Level}}</span>
+                    <span class="border border-accent p-2">Race: {{.Race.Type}}</span>
+                    <span class="border border-accent p-2">Subrace: {{.Race.Subrace}}</span>
+                </div>
+                <div class="flex gap-4">
+                    <span class="border border-accent p-2">Armor Class: {{.GetArmorClass}}</span>
+                    <span class="border border-accent p-2">Initiative: {{.GetInitiative}}</span>
+                    <span class="border border-accent p-2">Move Speed: {{.GetMoveSpeed}}</span>
+                    <span class="border border-accent p-2">Proficiency Bonus: {{.GetProficiencyBonus}}</span>
+                    <span class="border border-accent p-2">Hit Die: {{.Class.GetHitDie}}</span>
+                    <span class="border border-accent p-2">Hit Points: {{.GetMaxHealthPoints}}</span>
+                </div>
+                <div class="p-4 border flex flex-col gap-2 max-w-fit max-h-fit">
+                    {{template "savingThrow" (savingThrow "Strength" .)}}
+                    {{template "savingThrow" (savingThrow "Dexterity" .)}}
+                    {{template "savingThrow" (savingThrow "Constitution" .)}}
+                    {{template "savingThrow" (savingThrow "Intelligence" .)}}
+                    {{template "savingThrow" (savingThrow "Wisdom" .)}}
+                    {{template "savingThrow" (savingThrow "Charisma" .)}}
+                </div>
             </div>
         </div>
     </div>

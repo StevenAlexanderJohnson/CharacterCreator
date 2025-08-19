@@ -1,6 +1,7 @@
 package character
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -14,20 +15,6 @@ var (
 
 type StatName string
 
-func (s *StatName) UnmarshalYAML(value *yaml.Node) error {
-	var str string
-	if err := value.Decode(&str); err != nil {
-		return err
-	}
-	switch StatName(str) {
-	case StatStrength, StatDexterity, StatConstitution, StatIntelligence, StatWisdom, StatCharisma, StatYourChoice:
-		*s = StatName(str)
-		return nil
-	default:
-		return fmt.Errorf("error occurred while parsing stat from yaml: %v", ErrUndefinedStat)
-	}
-}
-
 const (
 	StatStrength     StatName = "Strength"
 	StatDexterity    StatName = "Dexterity"
@@ -38,6 +25,41 @@ const (
 	StatYourChoice   StatName = "YourChoice" // Should be edited in the YAML file
 )
 
+func (c StatName) IsValid() bool {
+	switch c {
+	case StatStrength, StatDexterity, StatConstitution, StatIntelligence, StatWisdom, StatCharisma, StatYourChoice:
+		return true
+	default:
+		return false
+	}
+}
+
+func (s *StatName) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return err
+	}
+	stat := StatName(str)
+	if !stat.IsValid() {
+		return fmt.Errorf("error occurred while parsing stat from json: %v", ErrUndefinedStat)
+	}
+	*s = stat
+	return nil
+}
+
+func (s *StatName) UnmarshalYAML(value *yaml.Node) error {
+	var str string
+	if err := value.Decode(&str); err != nil {
+		return err
+	}
+	stat := StatName(str)
+	if !stat.IsValid() {
+		return fmt.Errorf("error occurred while parsing stat from yaml: %v", ErrUndefinedStat)
+	}
+	*s = stat
+	return nil
+}
+
 type StatBlock struct {
 	Strength     int `yaml:"strength"`
 	Dexterity    int `yaml:"dexterity"`
@@ -47,7 +69,7 @@ type StatBlock struct {
 	Charisma     int `yaml:"charisma"`
 }
 
-func (s *StatBlock) GetAbilityScore(stat StatName) (int, error) {
+func (s *StatBlock) GetAbilityScore(stat StatName) int {
 	var statValue int
 	switch stat {
 	case StatStrength:
@@ -64,14 +86,14 @@ func (s *StatBlock) GetAbilityScore(stat StatName) (int, error) {
 		statValue = s.Charisma
 	case StatYourChoice:
 	default:
-		return 0, ErrUndefinedStat
+		return 0
 	}
 
 	abilityScore := float64(statValue-10) / float64(2)
-	return int(math.Floor(abilityScore)), nil
+	return int(math.Floor(abilityScore))
 }
 
-func (s *StatBlock) SetStat(stat StatName, value int) error {
+func (s *StatBlock) SetStat(stat StatName, value int) {
 	switch stat {
 	case StatStrength:
 		s.Strength = value
@@ -86,8 +108,6 @@ func (s *StatBlock) SetStat(stat StatName, value int) error {
 	case StatCharisma:
 		s.Charisma = value
 	default:
-		return ErrUndefinedStat
+		return
 	}
-
-	return nil
 }

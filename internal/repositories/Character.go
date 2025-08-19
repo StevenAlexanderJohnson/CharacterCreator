@@ -15,10 +15,10 @@ func NewCharacterRepository(db *sql.DB) *CharacterRepository {
 	return &CharacterRepository{db}
 }
 
-func (r *CharacterRepository) getCharacterProficiencies(tx *sql.Tx, characterId int) ([]string, error) {
+func (r *CharacterRepository) getCharacterProficiencies(db *sql.DB, characterId int) ([]string, error) {
 	profQuery := `SELECT proficiency FROM character_proficiencies WHERE character_id = ?`
 
-	result, err := tx.Query(profQuery, characterId)
+	result, err := db.Query(profQuery, characterId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get character proficiencies: %w", err)
 	}
@@ -98,19 +98,14 @@ func (r *CharacterRepository) Create(data *models.Character) (*models.Character,
 func (r *CharacterRepository) Get(id int, ownerId int) (*models.Character, error) {
 	var character models.Character
 
-	tx, err := r.db.Begin()
-	if err != nil {
-		return nil, fmt.Errorf("error beginning transaction: %w", err)
-	}
-
 	charQuery := `
 		SELECT
 			id, owner_id, name, bio, background, class, level, race_type, subrace_type, race_move_speed,
 			strength, dexterity, constitution, intelligence, wisdom, charisma, current_health_points
 		FROM characters WHERE id = ? AND owner_id = ?;
 	`
-	row := tx.QueryRow(charQuery, id, ownerId)
-	err = row.Scan(
+	row := r.db.QueryRow(charQuery, id, ownerId)
+	err := row.Scan(
 		&character.ID, &character.OwnerId, &character.Name, &character.Bio, &character.Background, &character.Class,
 		&character.Level, &character.RaceType, &character.SubraceType, &character.RaceMoveSpeed,
 		&character.Strength, &character.Dexterity, &character.Constitution, &character.Intelligence,
@@ -123,7 +118,7 @@ func (r *CharacterRepository) Get(id int, ownerId int) (*models.Character, error
 		return nil, fmt.Errorf("failed to get character by ID %d: %w", id, err)
 	}
 
-	proficiencies, err := r.getCharacterProficiencies(tx, character.ID)
+	proficiencies, err := r.getCharacterProficiencies(r.db, character.ID)
 	if err != nil {
 		return nil, fmt.Errorf("error getting proficiency for %d: %w", character.ID, err)
 	}
@@ -133,11 +128,6 @@ func (r *CharacterRepository) Get(id int, ownerId int) (*models.Character, error
 }
 
 func (r *CharacterRepository) GetAll(ownerId int) ([]models.Character, error) {
-	tx, err := r.db.Begin()
-	if err != nil {
-		return nil, fmt.Errorf("error beginning transaction: %w", err)
-	}
-
 	query := `
 		SELECT
 			c.id, c.owner_id, c.name, c.bio, c.background, c.class, c.level, c.race_type, c.subrace_type, c.race_move_speed,
@@ -167,7 +157,7 @@ func (r *CharacterRepository) GetAll(ownerId int) ([]models.Character, error) {
 			return nil, fmt.Errorf("failed to scan character row for owner %d: %w", ownerId, err)
 		}
 
-		proficiencies, err := r.getCharacterProficiencies(tx, char.ID)
+		proficiencies, err := r.getCharacterProficiencies(r.db, char.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get character proficiencies: %w", err)
 		}
