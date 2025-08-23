@@ -7,8 +7,9 @@
         <span class="text-red-500">{{.Error}}</span>
         {{end}}
 
-        <button type="button" class="col-span-2 bg-primary p-2 rounded-lg max-w-fit hover:cursor-pointer">Generate
-            Background</button>
+        <button type="button" class="col-span-2 bg-primary p-2 rounded-lg max-w-fit hover:cursor-pointer">
+            Generate Background
+        </button>
 
         <label for="Name">Name</label>
         <input type="text" name="Name" id="Name" value="{{.Character.Name}}" class="border border-primary p-2"
@@ -19,14 +20,16 @@
 
         <label for="Background">Background</label>
         <div class="flex flex-col gap-2">
+            {{- $isCustomBackground := isCustomBackground .BackgroundOptions .Character.Background -}}
             <input type="text" name="Background" id="Background" value="{{.Character.Background}}"
-                class="border border-primary p-2 sr-only" required />
-            <select id="BackgroundSelect" value="{{.Character.Background}}" class="border border-primary p-2" required>
-                <option value="" disabled selected></option>
+                class="border border-primary p-2 {{if not $isCustomBackground}}sr-only{{end}}" required />
+            <select id="BackgroundSelect" class="border border-primary p-2" required>
+                <option value="" disabled {{if not .Character.Background}}selected{{end}}></option>
                 {{range .BackgroundOptions}}
-                <option value="{{.}}" class="bg-secondary">{{.}}</option>
+                <option value="{{.}}" class="bg-secondary" {{if eq . $.Character.Background}}selected{{end}}>{{.}}
+                </option>
                 {{end}}
-                <option value="-1" class="bg-secondary">Custom</option>
+                <option value="-1" class="bg-secondary"{{if $isCustomBackground}}selected{{end}}>Custom</option>
             </select>
         </div>
 
@@ -35,37 +38,41 @@
             class="border border-primary p-2" required />
 
         <label for="ClassSelect">Class</label>
-        <select id="ClassSelect" name="ClassSelect" value="{{.Character.Class}}" class="border border-primary p-2" required>
-            <option value="" disabled selected></option>
+        <select id="ClassSelect" name="ClassSelect" value="{{.Character.Class}}" class="border border-primary p-2"
+            value="{{.Character.Class}}" required>
+            <option value="" disabled {{if not .Character.Background}}selected{{end}}></option>
             {{range .ClassOptions}}
-            <option value="{{.}}" class="bg-secondary">{{.}}</option>
+            <option value="{{.}}" class="bg-secondary" {{if eq . $.Character.Class}}selected{{end}}>{{.}}</option>
             {{end}}
         </select>
 
         <label for="RaceType">Race</label>
         <div class="flex flex-col gap-2">
+            {{- $isCustomRace := isCustomRace .RaceOptions .Character.RaceType -}}
             <input type="text" name="RaceType" id="RaceType" value="{{.Character.RaceType}}"
                 class="border border-primary p-2 sr-only" required />
             <select id="RaceSelect" value="{{.Character.RaceType}}" class="border border-primary p-2" required>
-                <option value="" disabled selected></option>
+                <option value="" disabled {{if not $isCustomRace}}selected{{end}}></option>
                 {{range .RaceOptions}}
-                <option value="{{.}}" class="bg-secondary">{{.}}</option>
+                <option value="{{.}}" class="bg-secondary" {{if eq . $.Character.RaceType}}selected{{end}}>{{.}}
+                </option>
                 {{end}}
-                <option value="-1" class="bg-secondary">Custom</option>
+                <option value="-1" class="bg-secondary" {{if $isCustomRace}}selected{{end}}>Custom</option>
             </select>
         </div>
 
         <label for="SubraceType">Subrace</label>
         <div class="flex flex-col gap-2">
+            {{- $isCustomSubrace := isCustomSubrace .SubraceOptions .Character.SubraceType -}}
             <input type="text" name="SubraceType" id="SubraceType" value="{{.Character.SubraceType.String}}"
                 class="border border-primary p-2 sr-only" required />
-            <select id="SubraceSelect" value="{{.Character.SubraceType.String}}" class="border border-primary p-2"
-                required>
-                <option value="" disabled selected></option>
+            <select id="SubraceSelect" class="border border-primary p-2" required>
+                <option value="" disabled {{if not $isCustomSubrace}}selected{{end}}></option>
                 {{range .SubraceOptions}}
-                <option value="{{.}}" class="bg-secondary">{{.}}</option>
+                <option value="{{.}}" class="bg-secondary" {{if eq . $.Character.SubraceType.String}}selected{{end}}>
+                    {{.}}</option>
                 {{end}}
-                <option value="-1" class="bg-secondary">Custom</option>
+                <option value="-1" class="bg-secondary" {{if $isCustomSubrace}}selected{{end}}>Custom</option>
             </select>
         </div>
 

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"database/sql"
 	"dndcc/internal/character"
 	"dndcc/internal/models"
 	"dndcc/internal/models/page"
@@ -8,6 +9,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/StevenAlexanderJohnson/grove"
@@ -69,7 +71,20 @@ func NewCharacterController(logger grove.ILogger, service *services.CharacterSer
 		"internal/templates/pages/characterList.html.tmpl",
 	))
 
-	pageTemplates["new"] = template.Must(template.ParseFiles(
+	pageTemplates["new"] = template.Must(template.New("edit").Funcs(template.FuncMap{
+		"isCustomBackground": func(list []character.BackgroundName, item string) bool {
+			return !slices.Contains(list, character.BackgroundName(item))
+		},
+		"isCustomRace": func(list []character.RaceName, item string) bool {
+			return !slices.Contains(list, character.RaceName(item))
+		},
+		"isCustomSubrace": func(list []character.SubraceName, item sql.NullString) bool {
+			if !item.Valid {
+				return false
+			}
+			return !slices.Contains(list, character.SubraceName(item.String))
+		},
+	}).ParseFiles(
 		"internal/templates/layouts/layout.html.tmpl",
 		"internal/templates/pages/characterEdit.html.tmpl",
 	))
@@ -94,6 +109,7 @@ func (c *CharacterController) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /character", c.GetAll)
 	mux.HandleFunc("GET /character/new", c.NewCharacter)
 	mux.HandleFunc("GET /character/{id}", c.GetByID)
+	mux.HandleFunc("GET /character/{id}/edit", c.EditCharacter)
 	mux.HandleFunc("PUT /character/{id}", c.Update)
 	mux.HandleFunc("DELETE /character/{id}", c.Delete)
 }
@@ -115,7 +131,7 @@ func (c *CharacterController) Create(w http.ResponseWriter, r *http.Request) {
 	data, err := models.CharacterFromForm(r)
 	if err != nil {
 		c.logger.Warning("parsing request form to character in /character/new endpoint failed: %v", err)
-		if err := c.pageTemplates["new"].Execute(w, page.NewCharacterEditPageData("/character", "post", err.Error(), data)); err != nil {
+		if err := c.pageTemplates["new"].ExecuteTemplate(w, "layout.html.tmpl", page.NewCharacterEditPageData("/character", "post", err.Error(), data)); err != nil {
 			c.logger.Error("an error occurred while rendering the edit page after failed create", err)
 			http.Error(w, "", http.StatusInternalServerError)
 		}
@@ -162,7 +178,7 @@ func (c *CharacterController) NewCharacter(w http.ResponseWriter, r *http.Reques
 		"",
 		&models.Character{Level: 1},
 	))
-	if err := c.pageTemplates["new"].Execute(w, pageData); err != nil {
+	if err := c.pageTemplates["new"].ExecuteTemplate(w, "layout.html.tmpl", pageData); err != nil {
 		c.logger.Error("failed to render template new within the character controller", err)
 		grove.WriteErrorToResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -197,10 +213,49 @@ func (c *CharacterController) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pageData := page.NewPageData(ok, claims, item.ToCharacterSheet())
+	pageData := page.NewPageData(ok, claims, page.NewCharacterViewPageData(item.ID, item.ToCharacterSheet()))
 	if err := c.pageTemplates["character"].ExecuteTemplate(w, "layout.html.tmpl", pageData); err != nil {
 		c.logger.Error("an error occurred while rendering character page", err)
 		grove.WriteErrorToResponse(w, http.StatusInternalServerError, "")
+		return
+	}
+}
+
+func (c *CharacterController) EditCharacter(w http.ResponseWriter, r *http.Request) {
+	claims, ok := r.Context().Value(grove.AuthTokenKey).(*models.Claims)
+	if !ok {
+		grove.WriteErrorToResponse(w, http.StatusUnauthorized, "")
+		return
+	}
+
+	idString := r.PathValue("id")
+	if idString == "" {
+		grove.WriteErrorToResponse(w, http.StatusBadRequest, "ID is required")
+		return
+	}
+	id, err := strconv.Atoi(idString)
+	if err != nil {
+		grove.WriteErrorToResponse(w, http.StatusBadRequest, "Invalid ID format")
+		return
+	}
+	item, err := c.service.Get(id, claims.UserId)
+	if err != nil {
+		grove.WriteErrorToResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if item == nil {
+		grove.WriteErrorToResponse(w, http.StatusNotFound, "Item not found")
+		return
+	}
+	pageData := page.NewPageData(ok, claims, page.NewCharacterEditPageData(
+		"put",
+		fmt.Sprintf("/character/%d", item.ID),
+		"",
+		item,
+	))
+	if err := c.pageTemplates["new"].ExecuteTemplate(w, "layout.html.tmpl", pageData); err != nil {
+		c.logger.Error("failed to render template edit within the character controller", err)
+		grove.WriteErrorToResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 }
