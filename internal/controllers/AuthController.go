@@ -133,18 +133,27 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *AuthController) Register(w http.ResponseWriter, r *http.Request) {
-	data, err := grove.ParseJsonBodyFromRequest[*models.Auth](r)
+	if err := r.ParseForm(); err != nil {
+		c.logger.Warning("received an invalid form request to the login page: %s", r.RemoteAddr)
+		grove.WriteErrorToResponse(w, http.StatusBadRequest, "Failed to parse form")
+		return
+	}
+	var data models.Auth
+	data.Username = r.FormValue("Username")
+	data.Password = r.FormValue("Password")
+	data.ConfirmPassword = r.FormValue("Confirm-Password")
+	newData, err := c.authService.Create(&data)
 	if err != nil {
-		grove.WriteErrorToResponse(w, http.StatusBadRequest, err.Error())
+		c.logger.Error(err.Error())
+		pageData := page.NewPageData(false, nil, page.RegisterPageData{
+			Error: err.Error(),
+		})
+		if err := c.pageTemplates["register"].Execute(w, &pageData); err != nil {
+			c.logger.Error(err.Error())
+			grove.WriteErrorToResponse(w, http.StatusInternalServerError, "")
+		}
 		return
 	}
-	newData, err := c.authService.Create(data)
-	if err != nil {
-		grove.WriteErrorToResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if err := grove.WriteJsonBodyToResponse(w, newData); err != nil {
-		grove.WriteErrorToResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+	c.logger.Info("new user registered: %s with id %d", newData.Username, newData.ID)
 }
