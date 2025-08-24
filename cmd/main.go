@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"dndcc/internal"
 	"dndcc/internal/controllers"
 	"dndcc/internal/database"
@@ -9,12 +10,18 @@ import (
 	"dndcc/internal/repositories"
 	"dndcc/internal/services"
 	"net/http"
+	"os/signal"
+	"syscall"
 
 	"github.com/StevenAlexanderJohnson/grove"
 	_ "modernc.org/sqlite"
 )
 
 func main() {
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	app := grove.NewApp("ccapi")
 
 	config, err := internal.ParseAppConfig()
@@ -32,6 +39,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer db.Close()
 
 	authenticator := grove.NewAuthenticator[*models.Claims](authConfig)
 
@@ -55,7 +63,14 @@ func main() {
 		WithController(controllers.NewCharacterController(logger, characterService)).
 		WithRoute("/public/", http.FileServer(http.Dir("public")))
 
-	if err := app.Run(); err != nil {
-		panic(err)
-	}
+	go func() {
+		if err := app.Run(); err != nil {
+			panic(err)
+		}
+	}()
+
+	<-ctx.Done()
+	logger.Info("shutting down gracefully, press Ctrl+C again to force")
+	db.Close()
+	logger.Info("database connection closed")
 }
