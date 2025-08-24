@@ -17,7 +17,7 @@ var (
 	ErrMigrationFailed = errors.New("an error occurred while processing database migration")
 )
 
-func getLastMigrationApplied(db *sql.DB) (string, error) {
+func getAppliedMigrations(db *sql.DB) ([]string, error) {
 	// Create the migrations table if it doesn't exist.
 	// The `IF NOT EXISTS` clause is crucial for idempotency.
 	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS migrations (
@@ -25,27 +25,43 @@ func getLastMigrationApplied(db *sql.DB) (string, error) {
 		applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	)`)
 	if err != nil {
-		return "", fmt.Errorf("%w: failed to create migrations table", ErrMigrationFailed)
+		return nil, fmt.Errorf("%w: failed to create migrations table", ErrMigrationFailed)
 	}
 
 	// Query for the name of the last applied migration, ordered by applied_at timestamp.
-	var lastMigration string
-	row := db.QueryRow("SELECT name FROM migrations ORDER BY applied_at DESC LIMIT 1")
-	err = row.Scan(&lastMigration)
-
+	var output []string
+	rows, err := db.Query("SELECT name FROM migrations ORDER BY applied_at ASC")
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			// No migrations have been applied yet.
-			return "", nil
+		return nil, fmt.Errorf("%w: failed to query applied migrations", ErrMigrationFailed)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, fmt.Errorf("%w: failed to scan migration name", ErrMigrationFailed)
 		}
-		return "", fmt.Errorf("%w: failed to get last applied migration", ErrMigrationFailed)
+		output = append(output, name)
 	}
 
-	return lastMigration, nil
+	if rows.Err() != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// No migrations have been applied yet.
+			return nil, nil
+		}
+		return nil, fmt.Errorf("%w: failed to get last applied migration", ErrMigrationFailed)
+	}
+
+	return output, nil
 }
 
 // Gets a list of migrations that have been created after the last migration
-func getUnappliedMigrations(lastApplied string) ([]string, error) {
+func getUnappliedMigrations(appliedMigrations []string) ([]string, error) {
+	var appliedMap = make(map[string]bool)
+	for _, name := range appliedMigrations {
+		appliedMap[name] = true
+	}
+
 	// For this to work, you need a 'db/migrations' directory
 	// and your files must be named like 'YYYYMMDDhhmmss_name.sql'
 	dir := "dbmigration"
@@ -63,9 +79,11 @@ func getUnappliedMigrations(lastApplied string) ([]string, error) {
 		// The migration file name itself is the timestamp.
 		fileName := strings.TrimSuffix(file.Name(), ".sql")
 
-		if lastApplied == "" || fileName > lastApplied {
-			unapplied = append(unapplied, filepath.Join(dir, file.Name()))
+		if appliedMap[fileName] {
+			continue // This migration has already been applied.
 		}
+
+		unapplied = append(unapplied, filepath.Join(dir, file.Name()))
 	}
 
 	sort.Strings(unapplied) // Ensure migrations are applied in sequential order.
@@ -73,10 +91,11 @@ func getUnappliedMigrations(lastApplied string) ([]string, error) {
 }
 
 func initializeDatabase(db *sql.DB) error {
-	lastMigration, err := getLastMigrationApplied(db)
+	lastMigration, err := getAppliedMigrations(db)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrMigrationFailed, err)
 	}
+	fmt.Println("Last applied migration:", lastMigration)
 
 	migrations, err := getUnappliedMigrations(lastMigration)
 	if err != nil {
