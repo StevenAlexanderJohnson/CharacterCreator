@@ -9,7 +9,8 @@ import (
 	"sort"
 	"strings"
 
-	_ "modernc.org/sqlite"
+	"modernc.org/sqlite"
+	sqlite3 "modernc.org/sqlite/lib"
 )
 
 var (
@@ -104,6 +105,13 @@ func initializeDatabase(db *sql.DB) error {
 		defer tx.Rollback()
 
 		if _, err := tx.Exec(string(content)); err != nil {
+			if liteErr, ok := err.(*sqlite.Error); ok {
+				code := liteErr.Code()
+				if code == sqlite3.SQLITE_CONSTRAINT_PRIMARYKEY {
+					// This migration has already been applied, skip it.
+					continue
+				}
+			}
 			return fmt.Errorf("%w: failed to execute migration %s: %v", ErrMigrationFailed, migrationFile, err)
 		}
 
@@ -112,6 +120,16 @@ func initializeDatabase(db *sql.DB) error {
 
 		// Record the applied migration in the migrations table
 		if _, err := tx.Exec("INSERT INTO migrations (name) VALUES (?)", name); err != nil {
+			if liteErr, ok := err.(*sqlite.Error); ok {
+				code := liteErr.Code()
+				if code == sqlite3.SQLITE_CONSTRAINT_PRIMARYKEY {
+					// This migration has already been applied, skip it.
+					if err := tx.Commit(); err != nil {
+						return fmt.Errorf("%w: failed to commit transaction for %s: %v", ErrMigrationFailed, migrationFile, err)
+					}
+					continue
+				}
+			}
 			return fmt.Errorf("%w: failed to record migration %s: %v", ErrMigrationFailed, migrationFile, err)
 		}
 
