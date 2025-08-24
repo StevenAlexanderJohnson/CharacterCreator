@@ -3,9 +3,19 @@ package models
 import (
 	"database/sql"
 	"dndcc/internal/character"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
+)
+
+var (
+	ErrInvalidCharacterName       = errors.New("character name cannot be empty")
+	ErrInvalidCharacterBackground = errors.New("character background cannot be empty")
+	ErrInvalidCharacterClass      = errors.New("character class cannot be empty")
+	ErrInvalidCharacterRace       = errors.New("character race cannot be empty")
+	ErrInvalidCharacterSubrace    = errors.New("character subrace cannot be empty if provided")
 )
 
 type Character struct {
@@ -27,6 +37,25 @@ type Character struct {
 	Charisma                int
 	CurrentHealthPoints     int
 	BackgroundProficiencies []string
+}
+
+func (c *Character) Validate() error {
+	if strings.TrimSpace(c.Name) == "" {
+		return ErrInvalidCharacterName
+	}
+	if strings.TrimSpace(c.Background) == "" {
+		return ErrInvalidCharacterBackground
+	}
+	if strings.TrimSpace(c.Class) == "" {
+		return ErrInvalidCharacterClass
+	}
+	if strings.TrimSpace(c.RaceType) == "" {
+		return ErrInvalidCharacterRace
+	}
+	if c.SubraceType.Valid && strings.TrimSpace(c.SubraceType.String) == "" {
+		return ErrInvalidCharacterSubrace
+	}
+	return nil
 }
 
 func (c *Character) ToCharacterSheet() *character.Character {
