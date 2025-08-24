@@ -14,6 +14,9 @@ func NewCharacterService(repo *repositories.CharacterRepository) *CharacterServi
 }
 
 func (s *CharacterService) Create(data *models.Character) (*models.Character, error) {
+	if err := data.Validate(); err != nil {
+		return nil, err
+	}
 	return s.repo.Create(data)
 }
 
@@ -26,6 +29,9 @@ func (s *CharacterService) List(userId int) ([]models.Character, error) {
 }
 
 func (s *CharacterService) Update(data *models.Character, id, userId int) (*models.Character, error) {
+	if err := data.Validate(); err != nil {
+		return nil, err
+	}
 	return s.repo.Update(data, id, userId)
 }
 

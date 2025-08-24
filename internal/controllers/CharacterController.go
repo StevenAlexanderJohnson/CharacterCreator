@@ -141,11 +141,16 @@ func (c *CharacterController) Create(w http.ResponseWriter, r *http.Request) {
 	data.OwnerId = claims.UserId
 	_, err = c.service.Create(data)
 	if err != nil {
-		grove.WriteErrorToResponse(w, http.StatusInternalServerError, err.Error())
+		c.logger.Error("an error occurred while updating character", err)
+		pageData := page.NewCharacterEditPageData("post", "/character", err.Error(), data)
+		if err := c.pageTemplates["new"].ExecuteTemplate(w, "content", pageData); err != nil {
+			c.logger.Error("an error occurred while rendering the edit page after failed update", err)
+			http.Error(w, "", http.StatusInternalServerError)
+		}
 		return
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("/character/%d", data.ID), http.StatusSeeOther)
+	w.Header().Set("HX-Redirect", fmt.Sprintf("/character/%d", data.ID))
 }
 
 func (c *CharacterController) GetAll(w http.ResponseWriter, r *http.Request) {
@@ -263,7 +268,24 @@ func (c *CharacterController) EditCharacter(w http.ResponseWriter, r *http.Reque
 func (c *CharacterController) Update(w http.ResponseWriter, r *http.Request) {
 	claims, ok := r.Context().Value(grove.AuthTokenKey).(*models.Claims)
 	if !ok {
+		c.logger.Warning("unauthenticated user reached /character/new endpoint")
 		grove.WriteErrorToResponse(w, http.StatusUnauthorized, "")
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		c.logger.Warning("an invalid request reached /character/new endpoint")
+		grove.WriteErrorToResponse(w, http.StatusBadRequest, "failed to parse form")
+		return
+	}
+
+	data, err := models.CharacterFromForm(r)
+	if err != nil {
+		c.logger.Warning("parsing request form to character in /character/new endpoint failed: %v", err)
+		if err := c.pageTemplates["new"].ExecuteTemplate(w, "layout.html.tmpl", page.NewCharacterEditPageData("/character", "post", err.Error(), data)); err != nil {
+			c.logger.Error("an error occurred while rendering the edit page after failed create", err)
+			http.Error(w, "", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -278,20 +300,18 @@ func (c *CharacterController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, err := grove.ParseJsonBodyFromRequest[*models.Character](r)
-	if err != nil {
-		grove.WriteErrorToResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
 	updatedData, err := c.service.Update(data, id, claims.UserId)
 	if err != nil {
-		grove.WriteErrorToResponse(w, http.StatusInternalServerError, err.Error())
+		c.logger.Error("an error occurred while updating character", err)
+		pageData := page.NewCharacterEditPageData("put", fmt.Sprintf("/character/%d", id), err.Error(), data)
+		if err := c.pageTemplates["new"].ExecuteTemplate(w, "content", pageData); err != nil {
+			c.logger.Error("an error occurred while rendering the edit page after failed update", err)
+			http.Error(w, "", http.StatusInternalServerError)
+		}
 		return
 	}
-	if err := grove.WriteJsonBodyToResponse(w, updatedData); err != nil {
-		grove.WriteErrorToResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+
+	w.Header().Set("HX-Redirect", fmt.Sprintf("/character/%d", updatedData.ID))
 }
 
 func (c *CharacterController) Delete(w http.ResponseWriter, r *http.Request) {

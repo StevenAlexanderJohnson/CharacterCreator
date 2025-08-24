@@ -1,10 +1,11 @@
 {{define "content"}}
-<form method="{{.Method}}" action="{{.Action}}" class="flex justify-center items-center">
+<form {{if eq .Method "post" }} hx-post="{{.Action}}" {{else if eq .Method "put" }} hx-put="{{.Action}}" {{end}}
+    hx-target="this" hx-swap="outerHTML" id="inputForm" class="flex justify-center items-center">
     <div class="grid grid-cols-2 p-8 gap-4 items-center">
         <input type="text" class="sr-only" value="{{.Character.ID}}" />
 
         {{if .Error}}
-        <span class="text-red-500">{{.Error}}</span>
+        <span class="text-red-500 col-span-2">{{.Error}}</span>
         {{end}}
 
         <button type="button" class="col-span-2 bg-primary p-2 rounded-lg max-w-fit hover:cursor-pointer">
@@ -20,7 +21,8 @@
 
         <label for="Background">Background</label>
         <div class="flex flex-col gap-2">
-            {{- $isCustomBackground := isCustomBackground .BackgroundOptions .Character.Background -}}
+            {{- $isCustomBackground := and (ne .Character.Background "") (isCustomBackground .BackgroundOptions
+            .Character.Background) -}}
             <input type="text" name="Background" id="Background" value="{{.Character.Background}}"
                 class="border border-primary p-2 {{if not $isCustomBackground}}sr-only{{end}}" required />
             <select id="BackgroundSelect" class="border border-primary p-2" required>
@@ -29,7 +31,7 @@
                 <option value="{{.}}" class="bg-secondary" {{if eq . $.Character.Background}}selected{{end}}>{{.}}
                 </option>
                 {{end}}
-                <option value="-1" class="bg-secondary"{{if $isCustomBackground}}selected{{end}}>Custom</option>
+                <option value="-1" class="bg-secondary" {{if $isCustomBackground}}selected{{end}}>Custom</option>
             </select>
         </div>
 
@@ -48,7 +50,7 @@
 
         <label for="RaceType">Race</label>
         <div class="flex flex-col gap-2">
-            {{- $isCustomRace := isCustomRace .RaceOptions .Character.RaceType -}}
+            {{- $isCustomRace := and (ne .Character.RaceType "") (isCustomRace .RaceOptions .Character.RaceType) -}}
             <input type="text" name="RaceType" id="RaceType" value="{{.Character.RaceType}}"
                 class="border border-primary p-2 sr-only" required />
             <select id="RaceSelect" value="{{.Character.RaceType}}" class="border border-primary p-2" required>
@@ -63,7 +65,8 @@
 
         <label for="SubraceType">Subrace</label>
         <div class="flex flex-col gap-2">
-            {{- $isCustomSubrace := isCustomSubrace .SubraceOptions .Character.SubraceType -}}
+            {{- $isCustomSubrace := and (ne .Character.SubraceType.String "") (isCustomSubrace .SubraceOptions
+            .Character.SubraceType) -}}
             <input type="text" name="SubraceType" id="SubraceType" value="{{.Character.SubraceType.String}}"
                 class="border border-primary p-2 sr-only" required />
             <select id="SubraceSelect" class="border border-primary p-2" required>
@@ -107,6 +110,7 @@
 {{define "script"}}
 <script>
     function setupSelectListener(selectName, inputName) {
+        console.log("Setting up listener for " + selectName + " to update " + inputName);
         document.getElementById(selectName).addEventListener('change', (event) => {
             let classInput = document.getElementById(inputName);
             if (event.target.value === "-1") {
@@ -118,10 +122,20 @@
             classInput.classList.add('sr-only');
         });
     }
+
     document.addEventListener('DOMContentLoaded', () => {
         setupSelectListener("RaceSelect", "RaceType");
         setupSelectListener("SubraceSelect", "SubraceType");
         setupSelectListener('BackgroundSelect', 'Background')
-    });
+    })
+    document.addEventListener('htmx:afterSwap', (e) => {
+        const swappedElement = e.detail.target;
+        if (swappedElement.id === 'inputForm') {
+            document.scrollingElement.scrollTop = 0;
+            setupSelectListener("RaceSelect", "RaceType");
+            setupSelectListener("SubraceSelect", "SubraceType");
+            setupSelectListener('BackgroundSelect', 'Background')
+        }
+    })
 </script>
 {{end}}
