@@ -42,6 +42,7 @@ func (a *AuthWithRefreshMiddleware) WithRouteException(route string) *AuthWithRe
 
 func (a *AuthWithRefreshMiddleware) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		a.logger.Debug("auth with refresh middleware executing for path: %s", r.URL.Path)
 		if strings.Contains(r.URL.Path, "/public/") {
 			next.ServeHTTP(w, r)
 			return
@@ -51,6 +52,7 @@ func (a *AuthWithRefreshMiddleware) Middleware(next http.Handler) http.Handler {
 			claims := &models.Claims{}
 			_, err := a.authenticator.VerifyToken(authCookie.Value, claims)
 			if err == nil {
+				a.logger.Debug("valid auth token presented, proceeding to next handler")
 				authContext := context.WithValue(r.Context(), grove.AuthTokenKey, claims)
 				next.ServeHTTP(w, r.WithContext(authContext))
 				return
@@ -63,13 +65,17 @@ func (a *AuthWithRefreshMiddleware) Middleware(next http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 				return
 			}
+			a.logger.Debug("no valid auth or refresh token presented, rejecting request")
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
 		session, err := a.sessionService.Get(refreshTokenCookie.Value)
 		if err != nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			a.logger.Error("an error occurred while automatically refreshing user token: %v", err)
+			controllers.SetAuthCookie(w, "", -1)
+			controllers.SetSessionCookie(w, "", -1)
+			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
 
