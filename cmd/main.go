@@ -55,12 +55,18 @@ func main() {
 	authWithRefreshMiddleware := middleware.
 		NewAuthWithRefreshMiddleware(logger, *authenticator, sessionService, authService).
 		WithRouteException("/").WithRouteException("/auth/login").WithRouteException("/auth/register")
-	app.
-		WithMiddleware(grove.DefaultRequestLoggerMiddleware(logger)).
+
+	authScope := grove.NewScope().
 		WithMiddleware(authWithRefreshMiddleware.Middleware).
 		WithController(controllers.NewAuthController(authService, sessionService, logger)).
 		WithController(controllers.NewHomeController(logger, authenticator)).
-		WithController(controllers.NewCharacterController(logger, characterService)).
+		WithController(controllers.NewCharacterController(logger, characterService))
+	app.
+		WithScope("/", authScope).
+		WithRoute("/health", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("OK"))
+		})).
 		WithRoute("/public/", http.FileServer(http.Dir("public")))
 
 	go func() {

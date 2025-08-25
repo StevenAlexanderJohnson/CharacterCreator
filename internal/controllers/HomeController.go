@@ -31,7 +31,6 @@ func NewHomeController(logger grove.ILogger, authenticator *grove.Authenticator[
 
 func (h *HomeController) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/", h.Index)
-	mux.HandleFunc("GET /health", h.HealthCheck)
 }
 
 func (h *HomeController) Index(w http.ResponseWriter, r *http.Request) {
@@ -53,8 +52,4 @@ func (h *HomeController) Index(w http.ResponseWriter, r *http.Request) {
 		grove.WriteErrorToResponse(w, http.StatusInternalServerError, "")
 		return
 	}
-}
-
-func (h *HomeController) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
 }
