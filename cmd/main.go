@@ -54,7 +54,7 @@ func main() {
 
 	authWithRefreshMiddleware := middleware.
 		NewAuthWithRefreshMiddleware(logger, *authenticator, sessionService, authService).
-		WithRouteException("/").WithRouteException("/auth/login").WithRouteException("/auth/register")
+		WithRouteException("/").WithRouteException("/auth/login").WithRouteException("/auth/register").WithRouteException("/auth/validate")
 
 	authScope := grove.NewScope().
 		WithMiddleware(authWithRefreshMiddleware.Middleware).

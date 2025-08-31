@@ -3,15 +3,15 @@ package services
 import (
 	"dndcc/internal/models"
 	"dndcc/internal/repositories"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
+	"io"
+	"net/http"
 	"time"
-	"unicode"
 
 	"github.com/StevenAlexanderJohnson/grove"
 	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
@@ -21,44 +21,6 @@ type AuthService struct {
 
 func NewAuthService(repo *repositories.AuthRepository, authenticator *grove.Authenticator[*models.Claims]) *AuthService {
 	return &AuthService{repo: repo, authenticator: authenticator}
-}
-
-func validatePasswordRequirements(password string) error {
-	if len(password) < 8 {
-		return errors.New("password must be at least 8 characters long")
-	}
-
-	var hasUpper, hasLower, hasNumber, hasSpecial bool
-	const specialChars = "!@#$%^&*()_+-=[]{}|;':\",.<>/?`~"
-
-	for _, char := range password {
-		switch {
-		case unicode.IsUpper(char):
-			hasUpper = true
-		case unicode.IsLower(char):
-			hasLower = true
-		case unicode.IsDigit(char):
-			hasNumber = true
-		case strings.ContainsRune(specialChars, char):
-			hasSpecial = true
-		}
-	}
-
-	// 2. Check all requirements
-	if !hasUpper {
-		return errors.New("password must contain at least one uppercase letter")
-	}
-	if !hasLower {
-		return errors.New("password must contain at least one lowercase letter")
-	}
-	if !hasNumber {
-		return errors.New("password must contain at least one number")
-	}
-	if !hasSpecial {
-		return errors.New("password must contain at least one special character")
-	}
-
-	return nil
 }
 
 func (s *AuthService) generateToken(user *models.Auth) (string, error) {
@@ -76,29 +38,10 @@ func (s *AuthService) generateToken(user *models.Auth) (string, error) {
 	})
 }
 
-func (s *AuthService) Create(data *models.Auth) (*models.Auth, error) {
-	if strings.TrimSpace(data.Username) == "" {
-		return nil, fmt.Errorf("username is required")
-	}
-	if err := validatePasswordRequirements(data.Password); err != nil {
-		return nil, err
-	}
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, fmt.Errorf("an error occurred while generating password hash: %v", err)
-	}
-	data.HashedPassword = string(hashedPassword)
-	return s.repo.Create(data)
-}
-
 func (s *AuthService) Get(user *models.Auth) (*models.Auth, string, time.Duration, error) {
 	data, err := s.repo.Get(user.Username)
 	if err != nil {
 		return nil, "", 0, fmt.Errorf("an error occurred while getting the user in auth service: %v", err)
-	}
-	err = bcrypt.CompareHashAndPassword([]byte(data.HashedPassword), []byte(user.Password))
-	if err != nil {
-		return nil, "", 0, fmt.Errorf("user provided invalid password for user %d", data.ID)
 	}
 
 	token, err := s.generateToken(data)
@@ -121,4 +64,64 @@ func (s *AuthService) GetTokenById(userId int) (string, time.Duration, error) {
 	}
 
 	return token, s.authenticator.Lifetime, nil
+}
+
+func (s *AuthService) ValidateOAuth2(token, token_id string) (*models.Auth, string, time.Duration, error) {
+	keys := []models.OAuth2PublicKey{}
+	resp, err := http.Get("http://localhost:8081/.well-known/jwks.json")
+	if err != nil {
+		return nil, "", 0, fmt.Errorf("failed to get well known jwks.json: %v", err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, "", 0, fmt.Errorf("failed to read the well known jwks.json response body: %v", err)
+	}
+
+	if err := json.Unmarshal(body, &keys); err != nil {
+		return nil, "", 0, fmt.Errorf("failed to unmarshal well known jwks.json: %v", err)
+	}
+
+	var key *models.OAuth2PublicKey
+	for _, k := range keys {
+		if k.ID == token_id {
+			key = &k
+			break
+		}
+	}
+	if key == nil {
+		return nil, "", 0, fmt.Errorf("failed to find valid key in well known jwks.json response")
+	}
+
+	oauth2Claims := &models.OAuth2Claims{}
+	parsedToken, err := jwt.ParseWithClaims(token, oauth2Claims, func(t *jwt.Token) (any, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		return &key.PublicKey, nil
+	})
+	if err != nil {
+		return nil, "", 0, fmt.Errorf("unable to parse OAuth2 token: %v", err)
+	}
+	if !parsedToken.Valid {
+		return nil, "", 0, fmt.Errorf("the OAuth2 claims validation failed")
+	}
+
+	user, err := s.repo.Get(oauth2Claims.Username)
+	if err != nil {
+		if !errors.Is(err, repositories.ErrUserNotFound) {
+			return nil, "", 0, fmt.Errorf("an error occurred while finding OAuth2 user in the database: %v", err)
+		}
+		user, err = s.repo.Create(oauth2Claims)
+		if err != nil {
+			return nil, "", 0, fmt.Errorf("failed to adding new OAuth2 user to database: %v", err)
+		}
+	}
+
+	authToken, err := s.generateToken(user)
+	if err != nil {
+		return nil, "", 0, fmt.Errorf("failed to generate token for OAuth2 user: %v", err)
+	}
+
+	return user, authToken, s.authenticator.Lifetime, nil
 }

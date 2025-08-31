@@ -7,6 +7,10 @@ import (
 	"fmt"
 )
 
+var (
+	ErrUserNotFound = errors.New("username could not be found")
+)
+
 type AuthRepository struct {
 	db *sql.DB
 }
@@ -15,10 +19,10 @@ func NewAuthRepository(db *sql.DB) *AuthRepository {
 	return &AuthRepository{db}
 }
 
-func (r *AuthRepository) Create(data *models.Auth) (*models.Auth, error) {
-	query := `INSERT INTO auth (username, hashed_password) VALUES (?, ?)`
+func (r *AuthRepository) Create(data *models.OAuth2Claims) (*models.Auth, error) {
+	query := `INSERT INTO auth (id, username) VALUES (?, ?)`
 
-	result, err := r.db.Exec(query, data.Username, data.HashedPassword)
+	result, err := r.db.Exec(query, data.ID, data.Username)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create auth record: %v", err)
 	}
@@ -36,10 +40,10 @@ func (r *AuthRepository) Create(data *models.Auth) (*models.Auth, error) {
 }
 
 func (r *AuthRepository) GetId(id int) (*models.Auth, error) {
-	query := `SELECT id, username, hashed_password, created_at, updated_at FROM auth WHERE id = ?;`
+	query := `SELECT id, username, created_at, updated_at FROM auth WHERE id = ?;`
 
 	var auth models.Auth
-	err := r.db.QueryRow(query, id).Scan(&auth.ID, &auth.Username, &auth.HashedPassword, &auth.CreatedAt, &auth.UpdatedAt)
+	err := r.db.QueryRow(query, id).Scan(&auth.ID, &auth.Username, &auth.CreatedAt, &auth.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("auth record with id %d not found", id)
@@ -51,13 +55,13 @@ func (r *AuthRepository) GetId(id int) (*models.Auth, error) {
 }
 
 func (r *AuthRepository) Get(username string) (*models.Auth, error) {
-	query := `SELECT id, username, hashed_password, created_at, updated_at FROM auth WHERE username = ?;`
+	query := `SELECT id, username, created_at, updated_at FROM auth WHERE username = ?;`
 
 	var auth models.Auth
-	err := r.db.QueryRow(query, username).Scan(&auth.ID, &auth.Username, &auth.HashedPassword, &auth.CreatedAt, &auth.UpdatedAt)
+	err := r.db.QueryRow(query, username).Scan(&auth.ID, &auth.Username, &auth.CreatedAt, &auth.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("auth record with username %s not found", username)
+			return nil, ErrUserNotFound
 		}
 		return nil, fmt.Errorf("failed to get auth record by username %s: %w", username, err)
 	}
