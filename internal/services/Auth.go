@@ -1,6 +1,7 @@
 package services
 
 import (
+	"dndcc/internal"
 	"dndcc/internal/models"
 	"dndcc/internal/repositories"
 	"encoding/json"
@@ -17,10 +18,11 @@ import (
 type AuthService struct {
 	repo          *repositories.AuthRepository
 	authenticator *grove.Authenticator[*models.Claims]
+	config        *internal.AuthServiceConfig
 }
 
-func NewAuthService(repo *repositories.AuthRepository, authenticator *grove.Authenticator[*models.Claims]) *AuthService {
-	return &AuthService{repo: repo, authenticator: authenticator}
+func NewAuthService(repo *repositories.AuthRepository, authenticator *grove.Authenticator[*models.Claims], config *internal.AuthServiceConfig) *AuthService {
+	return &AuthService{repo: repo, authenticator: authenticator, config: config}
 }
 
 func (s *AuthService) generateToken(user *models.Auth) (string, error) {
@@ -66,9 +68,17 @@ func (s *AuthService) GetTokenById(userId int) (string, time.Duration, error) {
 	return token, s.authenticator.Lifetime, nil
 }
 
+func (s *AuthService) RedirectToAuthLogin(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, fmt.Sprintf("%s/login?service_name=%s&redirect_uri=/auth/validate", s.config.URL, s.config.ServiceName), http.StatusSeeOther)
+}
+
+func (s *AuthService) RedirectToAuthRegister(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, fmt.Sprintf("%s/register?service_name=%s&redirect_uri=/auth/validate", s.config.URL, s.config.ServiceName), http.StatusSeeOther)
+}
+
 func (s *AuthService) ValidateOAuth2(token, token_id string) (*models.Auth, string, time.Duration, error) {
 	keys := []models.OAuth2PublicKey{}
-	resp, err := http.Get("http://localhost:8081/.well-known/jwks.json")
+	resp, err := http.Get(fmt.Sprintf("%s/.well-known/jwks.json", s.config.URL))
 	if err != nil {
 		return nil, "", 0, fmt.Errorf("failed to get well known jwks.json: %v", err)
 	}

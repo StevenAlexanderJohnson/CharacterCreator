@@ -44,7 +44,7 @@ func main() {
 	authenticator := grove.NewAuthenticator[*models.Claims](authConfig)
 
 	authRepo := repositories.NewAuthRepository(db)
-	authService := services.NewAuthService(authRepo, authenticator)
+	authService := services.NewAuthService(authRepo, authenticator, config.AuthServiceConfig)
 
 	sessionRepo := repositories.NewSessionRepository(db)
 	sessionService := services.NewSessionService(sessionRepo)

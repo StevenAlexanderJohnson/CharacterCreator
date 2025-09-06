@@ -48,9 +48,31 @@ func LoadDbConfigEnv() (*DbConfig, error) {
 	}, nil
 }
 
+type AuthServiceConfig struct {
+	URL         string
+	ServiceName string
+}
+
+func LoadAuthServiceConfigEnv() (*AuthServiceConfig, error) {
+	authServiceURL := os.Getenv("AUTH_URL")
+	if authServiceURL == "" {
+		return nil, fmt.Errorf("no auth service url provided")
+	}
+	serviceName := os.Getenv("AUTH_SERVICE_NAME")
+	if serviceName == "" {
+		return nil, fmt.Errorf("no service name was provided")
+	}
+
+	return &AuthServiceConfig{
+		URL:         authServiceURL,
+		ServiceName: serviceName,
+	}, nil
+}
+
 type AppConfig struct {
-	LLM *LLMConfig
-	DB  *DbConfig
+	LLM               *LLMConfig
+	DB                *DbConfig
+	AuthServiceConfig *AuthServiceConfig
 }
 
 func ParseAppConfig() (*AppConfig, error) {
@@ -65,8 +87,14 @@ func ParseAppConfig() (*AppConfig, error) {
 		return nil, err
 	}
 
+	authServiceConfig, err := LoadAuthServiceConfigEnv()
+	if err != nil {
+		return nil, err
+	}
+
 	return &AppConfig{
 		llmConfig,
 		dbConfig,
+		authServiceConfig,
 	}, nil
 }

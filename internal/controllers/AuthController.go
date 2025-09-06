@@ -31,11 +31,11 @@ func (c *AuthController) RegisterRoutes(mux *http.ServeMux) {
 }
 
 func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "http://localhost:8081/login?service_name=localhost:8080&redirect_uri=/auth/validate", http.StatusSeeOther)
+	c.authService.RedirectToAuthLogin(w, r)
 }
 
 func (c *AuthController) Register(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "http://localhost:8081/register?service_name=localhost:8080&redirect_uri=/auth/validate", http.StatusSeeOther)
+	c.authService.RedirectToAuthRegister(w, r)
 }
 
 func (c *AuthController) ValidateOAuth2(w http.ResponseWriter, r *http.Request) {
