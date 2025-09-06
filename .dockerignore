@@ -1,0 +1,9 @@
+*.yaml
+.vscode/
+node_modules/
+.gitignore/
+*.db
+dockerfile
+package-lock.json
+package.json
+tailwind.css
